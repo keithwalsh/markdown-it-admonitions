@@ -18,6 +18,72 @@ const MIN_MARKER_NUM = 3;
 
 const defaultTypes: readonly string[] = ["note", "tip", "warning", "danger", "info"] as const;
 
+/**
+ * Helper functions for safe state property access
+ */
+const getLineStart = (state: StateBlock, line: number): number =>
+  (state.bMarks[line] ?? 0) + (state.tShift[line] ?? 0);
+
+const getLineEnd = (state: StateBlock, line: number): number =>
+  state.eMarks[line] ?? 0;
+
+const getLineIndent = (state: StateBlock, line: number): number =>
+  state.sCount[line] ?? 0;
+
+/**
+ * Check if marker sequence matches at given position
+ * @param state - Parser state
+ * @param pos - Starting position
+ * @param max - Maximum position
+ * @param marker - Marker string to match
+ * @param markerLength - Length of marker
+ * @returns Position after last matching marker character
+ */
+const matchMarkerSequence = (
+  state: StateBlock,
+  pos: number,
+  max: number,
+  marker: string,
+  markerLength: number,
+  startPos: number,
+): number => {
+  let checkPos = pos;
+  while (checkPos <= max) {
+    if (marker[(checkPos - startPos) % markerLength] !== state.src[checkPos]) {
+      break;
+    }
+    checkPos++;
+  }
+  return checkPos;
+};
+
+/**
+ * Interface for saved state values
+ */
+interface SavedState {
+  parentType: StateBlock["parentType"];
+  lineMax: number;
+  blkIndent: number;
+}
+
+/**
+ * Save relevant state properties
+ */
+const saveState = (state: StateBlock): SavedState => ({
+  parentType: state.parentType,
+  lineMax: state.lineMax,
+  blkIndent: state.blkIndent,
+});
+
+/**
+ * Restore previously saved state properties
+ */
+const restoreState = (state: StateBlock, saved: SavedState): void => {
+  state.parentType = saved.parentType;
+  state.lineMax = saved.lineMax;
+  state.blkIndent = saved.blkIndent;
+};
+
 const defaultIcons: Readonly<Record<string, string>> = {
   note: "📝",
   tip: "💡",
@@ -140,22 +206,23 @@ const createAdmonitionContainer = (
     endLine: number,
     silent: boolean,
   ): boolean => {
-    const currentLineStart = (state.bMarks[startLine] ?? 0) + (state.tShift[startLine] ?? 0);
-    const currentLineMax = state.eMarks[startLine] ?? 0;
-    const currentLineIndent = state.sCount[startLine] ?? 0;
+    const currentLineStart = getLineStart(state, startLine);
+    const currentLineMax = getLineEnd(state, startLine);
+    const currentLineIndent = getLineIndent(state, startLine);
 
     // Check out the first character quickly,
     // this should filter out most of non-containers
     if (markerStart !== state.src[currentLineStart]) return false;
 
-    let pos = currentLineStart + 1;
-
     // Check out the rest of the marker string
-    while (pos <= currentLineMax) {
-      if (marker[(pos - currentLineStart) % markerLength] !== state.src[pos])
-        break;
-      pos++;
-    }
+    let pos = matchMarkerSequence(
+      state,
+      currentLineStart + 1,
+      currentLineMax,
+      marker,
+      markerLength,
+      currentLineStart,
+    );
 
     const markerCount = Math.floor((pos - currentLineStart) / markerLength);
 
@@ -183,12 +250,12 @@ const createAdmonitionContainer = (
       nextLine < endLine;
       nextLine++
     ) {
-      const nextLineStart = (state.bMarks[nextLine] ?? 0) + (state.tShift[nextLine] ?? 0);
-      const nextLineMax = state.eMarks[nextLine] ?? 0;
+      const nextLineStart = getLineStart(state, nextLine);
+      const nextLineMax = getLineEnd(state, nextLine);
 
       if (
         nextLineStart < nextLineMax &&
-        (state.sCount[nextLine] ?? 0) < currentLineIndent
+        getLineIndent(state, nextLine) < currentLineIndent
       )
         // non-empty line with negative indent should stop the list:
         // - :::
@@ -197,14 +264,19 @@ const createAdmonitionContainer = (
 
       if (
         // closing fence should be indented same as opening one
-        (state.sCount[nextLine] ?? 0) === currentLineIndent &&
+        getLineIndent(state, nextLine) === currentLineIndent &&
         // match start
         markerStart === state.src[nextLineStart]
       ) {
         // check rest of marker
-        for (pos = nextLineStart + 1; pos <= nextLineMax; pos++)
-          if (marker[(pos - nextLineStart) % markerLength] !== state.src[pos])
-            break;
+        pos = matchMarkerSequence(
+          state,
+          nextLineStart + 1,
+          nextLineMax,
+          marker,
+          markerLength,
+          nextLineStart,
+        );
 
         // closing code fence must be at least as long as the opening one
         if (Math.floor((pos - nextLineStart) / markerLength) >= markerCount) {
@@ -221,9 +293,7 @@ const createAdmonitionContainer = (
       }
     }
 
-    const oldParent = state.parentType;
-    const oldLineMax = state.lineMax;
-    const oldBlkIndent = state.blkIndent;
+    const savedState = saveState(state);
 
     state.parentType = "container" as typeof state.parentType;
 
@@ -247,9 +317,7 @@ const createAdmonitionContainer = (
     closeToken.markup = markup;
     closeToken.block = true;
 
-    state.parentType = oldParent;
-    state.lineMax = oldLineMax;
-    state.blkIndent = oldBlkIndent;
+    restoreState(state, savedState);
     state.line = nextLine + (autoClosed ? 1 : 0);
 
     return true;
@@ -328,6 +396,31 @@ const defaultCloseRender = (renderTitle: boolean = true): RenderFunction => {
 };
 
 /**
+ * Helper function to register render rules for an admonition type
+ * @param md - The markdown-it instance
+ * @param type - The admonition type name
+ * @param mergedIcons - Icon mapping for admonition types
+ * @param customRenders - Custom render functions
+ */
+const registerRenderRules = (
+  md: MarkdownIt,
+  type: string,
+  mergedIcons: Readonly<Record<string, string>>,
+  customRenders: Readonly<Record<string, CustomRenderPair>>,
+): void => {
+  if (!md.renderer.rules[`admonition_${type}_open`]) {
+    const customOpen = customRenders[type]?.open;
+    const customClose = customRenders[type]?.close;
+
+    md.renderer.rules[`admonition_${type}_open`] =
+      customOpen || defaultOpenRender(type, mergedIcons[type], true);
+
+    md.renderer.rules[`admonition_${type}_close`] =
+      customClose || defaultCloseRender(true);
+  }
+};
+
+/**
  * Create an Obsidian-style callout rule
  * @param types - Array of valid admonition type names
  * @returns A RuleBlock function that parses Obsidian callout syntax
@@ -349,8 +442,8 @@ const createObsidianCalloutRule = (
     endLine: number,
     silent: boolean,
   ): boolean => {
-    const pos = (state.bMarks[startLine] ?? 0) + (state.tShift[startLine] ?? 0);
-    const max = state.eMarks[startLine] ?? 0;
+    const pos = getLineStart(state, startLine);
+    const max = getLineEnd(state, startLine);
 
     // Check if line starts with >
     if (state.src[pos] !== ">") return false;
@@ -393,8 +486,8 @@ const createObsidianCalloutRule = (
     const contentLines: string[] = [];
 
     while (nextLine < endLine) {
-      const nextPos = (state.bMarks[nextLine] ?? 0) + (state.tShift[nextLine] ?? 0);
-      const nextMax = state.eMarks[nextLine] ?? 0;
+      const nextPos = getLineStart(state, nextLine);
+      const nextMax = getLineEnd(state, nextLine);
 
       // Check if line starts with >
       if (state.src[nextPos] !== ">") break;
@@ -407,8 +500,7 @@ const createObsidianCalloutRule = (
       nextLine++;
     }
 
-    const oldParent = state.parentType;
-    const oldLineMax = state.lineMax;
+    const savedState = saveState(state);
 
     state.parentType = "blockquote" as typeof state.parentType;
 
@@ -461,8 +553,7 @@ const createObsidianCalloutRule = (
     closeToken.markup = ">";
     closeToken.block = true;
 
-    state.parentType = oldParent;
-    state.lineMax = oldLineMax;
+    restoreState(state, savedState);
     state.line = nextLine;
 
     return true;
@@ -538,21 +629,7 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
       });
 
       // Set up render rules (if not already set by Obsidian style)
-      if (!md.renderer.rules[`admonition_${type}_open`]) {
-        const customOpen = customRenders[type]?.open;
-        const customClose = customRenders[type]?.close;
-
-        md.renderer.rules[`admonition_${type}_open`] =
-          customOpen ||
-          defaultOpenRender(
-            type,
-            mergedIcons[type],
-            true,
-          );
-
-        md.renderer.rules[`admonition_${type}_close`] =
-          customClose || defaultCloseRender(true);
-      }
+      registerRenderRules(md, type, mergedIcons, customRenders);
     }
   }
 
@@ -565,17 +642,7 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
 
     // Set up render rules for each type (shared with container style)
     for (const type of typesArray) {
-      if (!md.renderer.rules[`admonition_${type}_open`]) {
-        const customOpen = customRenders[type]?.open;
-        const customClose = customRenders[type]?.close;
-
-        md.renderer.rules[`admonition_${type}_open`] =
-          customOpen ||
-          defaultOpenRender(type, mergedIcons[type], true);
-
-        md.renderer.rules[`admonition_${type}_close`] =
-          customClose || defaultCloseRender(true);
-      }
+      registerRenderRules(md, type, mergedIcons, customRenders);
     }
   }
 };
