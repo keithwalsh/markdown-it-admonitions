@@ -8,6 +8,7 @@ import type Token from "markdown-it/lib/token.mjs";
 import type {
   AdmonitionPluginOptions,
   MarkdownItAdmonitionOptions,
+  RenderFunction,
 } from "./options.js";
 
 const MIN_MARKER_NUM = 3;
@@ -392,8 +393,6 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
           const typeName = params.trim().split(" ", 2)[0];
           return typeName === type;
         },
-        icon: mergedIcons[type],
-        renderTitle: true,
       };
 
       const container = createAdmonitionContainer(containerOptions);
@@ -411,12 +410,12 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
           customOpen ||
           defaultOpenRender(
             type,
-            containerOptions.icon,
-            containerOptions.renderTitle,
+            mergedIcons[type],
+            true,
           );
 
         md.renderer.rules[`admonition_${type}_close`] =
-          customClose || defaultCloseRender(containerOptions.renderTitle);
+          customClose || defaultCloseRender(true);
       }
     }
   }
@@ -446,5 +445,5 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
 };
 
 export default admonitionPlugin;
-export type { AdmonitionPluginOptions, MarkdownItAdmonitionOptions };
+export type { AdmonitionPluginOptions, MarkdownItAdmonitionOptions, RenderFunction };
 

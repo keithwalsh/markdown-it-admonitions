@@ -2,6 +2,17 @@ import type { Options } from "markdown-it";
 import type Renderer from "markdown-it/lib/renderer.mjs";
 import type Token from "markdown-it/lib/token.mjs";
 
+/**
+ * Custom render function type for admonition tags
+ */
+export type RenderFunction = (
+  tokens: Token[],
+  index: number,
+  options: Options,
+  env: unknown,
+  slf: Renderer,
+) => string;
+
 export interface MarkdownItAdmonitionOptions {
   /**
    * The name/type of the admonition (e.g., 'note', 'warning', 'tip')
@@ -18,39 +29,6 @@ export interface MarkdownItAdmonitionOptions {
    * Validate function to check if the params match this admonition type
    */
   validate?: (params: string, markup: string) => boolean;
-
-  /**
-   * Custom render function for opening tag
-   */
-  openRender?: (
-    tokens: Token[],
-    index: number,
-    options: Options,
-    env: unknown,
-    slf: Renderer,
-  ) => string;
-
-  /**
-   * Custom render function for closing tag
-   */
-  closeRender?: (
-    tokens: Token[],
-    index: number,
-    options: Options,
-    env: unknown,
-    slf: Renderer,
-  ) => string;
-
-  /**
-   * Icon to display for this admonition type
-   */
-  icon?: string;
-
-  /**
-   * Whether to render the title
-   * @default true
-   */
-  renderTitle?: boolean;
 }
 
 export interface AdmonitionPluginOptions {
@@ -87,8 +65,8 @@ export interface AdmonitionPluginOptions {
    * Custom render functions per type
    */
   customRenders?: Record<string, {
-    open?: MarkdownItAdmonitionOptions['openRender'];
-    close?: MarkdownItAdmonitionOptions['closeRender'];
+    open?: RenderFunction;
+    close?: RenderFunction;
   }>;
 }
 
