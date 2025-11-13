@@ -9,18 +9,90 @@ import type {
   AdmonitionPluginOptions,
   MarkdownItAdmonitionOptions,
   RenderFunction,
+  RenderEnvironment,
+  ValidateFunction,
+  CustomRenderPair,
 } from "./options.js";
 
 const MIN_MARKER_NUM = 3;
 
-const defaultTypes = ["note", "tip", "warning", "danger", "info"];
+const defaultTypes: readonly string[] = ["note", "tip", "warning", "danger", "info"] as const;
 
-const defaultIcons: Record<string, string> = {
+const defaultIcons: Readonly<Record<string, string>> = {
   note: "📝",
   tip: "💡",
   warning: "⚠️",
   danger: "🚨",
   info: "ℹ️",
+} as const;
+
+/**
+ * Type guard to check if a value is a non-empty string
+ */
+const isNonEmptyString = (value: unknown): value is string => {
+  return typeof value === "string" && value.length > 0;
+};
+
+/**
+ * Type guard to check if a value is a valid array of strings
+ */
+const isStringArray = (value: unknown): value is string[] => {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+};
+
+/**
+ * Validates plugin options at runtime
+ * @throws {TypeError} if options are invalid
+ */
+const validatePluginOptions = (options: AdmonitionPluginOptions): void => {
+  if (options.types !== undefined) {
+    if (!isStringArray(options.types)) {
+      throw new TypeError("options.types must be an array of strings");
+    }
+    if (options.types.some((type) => !isNonEmptyString(type))) {
+      throw new TypeError("All type names must be non-empty strings");
+    }
+  }
+
+  if (options.marker !== undefined && !isNonEmptyString(options.marker)) {
+    throw new TypeError("options.marker must be a non-empty string");
+  }
+
+  if (options.icons !== undefined) {
+    if (typeof options.icons !== "object" || options.icons === null) {
+      throw new TypeError("options.icons must be an object");
+    }
+    for (const [key, value] of Object.entries(options.icons)) {
+      if (!isNonEmptyString(key) || typeof value !== "string") {
+        throw new TypeError("options.icons must map string keys to string values");
+      }
+    }
+  }
+
+  if (options.obsidianStyle !== undefined && typeof options.obsidianStyle !== "boolean") {
+    throw new TypeError("options.obsidianStyle must be a boolean");
+  }
+
+  if (options.docusaurusStyle !== undefined && typeof options.docusaurusStyle !== "boolean") {
+    throw new TypeError("options.docusaurusStyle must be a boolean");
+  }
+
+  if (options.customRenders !== undefined) {
+    if (typeof options.customRenders !== "object" || options.customRenders === null) {
+      throw new TypeError("options.customRenders must be an object");
+    }
+    for (const [key, value] of Object.entries(options.customRenders)) {
+      if (!isNonEmptyString(key)) {
+        throw new TypeError("customRenders keys must be non-empty strings");
+      }
+      if (value.open !== undefined && typeof value.open !== "function") {
+        throw new TypeError(`customRenders.${key}.open must be a function`);
+      }
+      if (value.close !== undefined && typeof value.close !== "function") {
+        throw new TypeError(`customRenders.${key}.close must be a function`);
+      }
+    }
+  }
 };
 
 /**
@@ -37,10 +109,21 @@ const escapeHtml = (text: string): string => {
 
 /**
  * Create a container rule for a specific admonition type
+ * @param options - Configuration for the admonition container
+ * @returns A RuleBlock function that parses the admonition syntax
+ * @throws {TypeError} if options are invalid
  */
 const createAdmonitionContainer = (
   options: MarkdownItAdmonitionOptions,
 ): RuleBlock => {
+  // Validate options
+  if (!isNonEmptyString(options.name)) {
+    throw new TypeError("Admonition name must be a non-empty string");
+  }
+  if (options.marker !== undefined && !isNonEmptyString(options.marker)) {
+    throw new TypeError("Marker must be a non-empty string");
+  }
+
   const {
     name,
     marker = ":",
@@ -57,9 +140,9 @@ const createAdmonitionContainer = (
     endLine: number,
     silent: boolean,
   ): boolean => {
-    const currentLineStart = state.bMarks[startLine] + state.tShift[startLine];
-    const currentLineMax = state.eMarks[startLine];
-    const currentLineIndent = state.sCount[startLine];
+    const currentLineStart = (state.bMarks[startLine] ?? 0) + (state.tShift[startLine] ?? 0);
+    const currentLineMax = state.eMarks[startLine] ?? 0;
+    const currentLineIndent = state.sCount[startLine] ?? 0;
 
     // Check out the first character quickly,
     // this should filter out most of non-containers
@@ -100,12 +183,12 @@ const createAdmonitionContainer = (
       nextLine < endLine;
       nextLine++
     ) {
-      const nextLineStart = state.bMarks[nextLine] + state.tShift[nextLine];
-      const nextLineMax = state.eMarks[nextLine];
+      const nextLineStart = (state.bMarks[nextLine] ?? 0) + (state.tShift[nextLine] ?? 0);
+      const nextLineMax = state.eMarks[nextLine] ?? 0;
 
       if (
         nextLineStart < nextLineMax &&
-        state.sCount[nextLine] < currentLineIndent
+        (state.sCount[nextLine] ?? 0) < currentLineIndent
       )
         // non-empty line with negative indent should stop the list:
         // - :::
@@ -114,7 +197,7 @@ const createAdmonitionContainer = (
 
       if (
         // closing fence should be indented same as opening one
-        state.sCount[nextLine] === currentLineIndent &&
+        (state.sCount[nextLine] ?? 0) === currentLineIndent &&
         // match start
         markerStart === state.src[nextLineStart]
       ) {
@@ -148,7 +231,7 @@ const createAdmonitionContainer = (
     state.lineMax = nextLine;
 
     // this will update the block indent
-    state.blkIndent = currentLineIndent;
+    state.blkIndent = currentLineIndent ?? 0;
 
     const openToken = state.push(`admonition_${name}_open`, "div", 1);
 
@@ -177,26 +260,34 @@ const createAdmonitionContainer = (
 
 /**
  * Default render function for opening admonition tag
+ * @param name - The admonition type name
+ * @param icon - Optional icon to display
+ * @param renderTitle - Whether to render the title section
+ * @returns A render function
  */
 const defaultOpenRender = (
   name: string,
   icon?: string,
   renderTitle: boolean = true,
-) => {
+): RenderFunction => {
   return (
     tokens: Token[],
     index: number,
     _options: Options,
-    _env: unknown,
+    _env: RenderEnvironment,
     slf: Renderer,
   ): string => {
     const token = tokens[index];
+    if (!token) {
+      throw new Error(`Token at index ${index} is undefined`);
+    }
+    
     const info = token.info.trim();
     const title = info.slice(name.length).trim() || name.charAt(0).toUpperCase() + name.slice(1);
 
     // Add classes to the opening tag
-    tokens[index].attrJoin("class", "admonition");
-    tokens[index].attrJoin("class", `admonition-${name}`);
+    token.attrJoin("class", "admonition");
+    token.attrJoin("class", `admonition-${name}`);
 
     let result = slf.renderToken(tokens, index, _options);
 
@@ -216,13 +307,15 @@ const defaultOpenRender = (
 
 /**
  * Default render function for closing admonition tag
+ * @param renderTitle - Whether the opening tag rendered a title section
+ * @returns A render function
  */
-const defaultCloseRender = (renderTitle: boolean = true) => {
+const defaultCloseRender = (renderTitle: boolean = true): RenderFunction => {
   return (
     tokens: Token[],
     index: number,
     options: Options,
-    _env: unknown,
+    _env: RenderEnvironment,
     slf: Renderer,
   ): string => {
     let result = "";
@@ -236,18 +329,28 @@ const defaultCloseRender = (renderTitle: boolean = true) => {
 
 /**
  * Create an Obsidian-style callout rule
+ * @param types - Array of valid admonition type names
+ * @returns A RuleBlock function that parses Obsidian callout syntax
+ * @throws {TypeError} if types array is invalid
  */
 const createObsidianCalloutRule = (
-  types: string[],
+  types: readonly string[],
 ): RuleBlock => {
+  // Validate types array
+  if (!Array.isArray(types) || types.length === 0) {
+    throw new TypeError("types must be a non-empty array");
+  }
+  if (!types.every(isNonEmptyString)) {
+    throw new TypeError("All types must be non-empty strings");
+  }
   const obsidianCallout: RuleBlock = (
     state: StateBlock,
     startLine: number,
     endLine: number,
     silent: boolean,
   ): boolean => {
-    const pos = state.bMarks[startLine] + state.tShift[startLine];
-    const max = state.eMarks[startLine];
+    const pos = (state.bMarks[startLine] ?? 0) + (state.tShift[startLine] ?? 0);
+    const max = state.eMarks[startLine] ?? 0;
 
     // Check if line starts with >
     if (state.src[pos] !== ">") return false;
@@ -290,8 +393,8 @@ const createObsidianCalloutRule = (
     const contentLines: string[] = [];
 
     while (nextLine < endLine) {
-      const nextPos = state.bMarks[nextLine] + state.tShift[nextLine];
-      const nextMax = state.eMarks[nextLine];
+      const nextPos = (state.bMarks[nextLine] ?? 0) + (state.tShift[nextLine] ?? 0);
+      const nextMax = state.eMarks[nextLine] ?? 0;
 
       // Check if line starts with >
       if (state.src[nextPos] !== ">") break;
@@ -333,11 +436,14 @@ const createObsidianCalloutRule = (
 
       let offset = 0;
       for (let i = 0; i < contentLines.length; i++) {
+        const line = contentLines[i];
+        if (line === undefined) continue;
+        
         state.bMarks.push(offset);
-        state.eMarks.push(offset + contentLines[i].length);
+        state.eMarks.push(offset + line.length);
         state.tShift.push(0);
         state.sCount.push(0);
-        offset += contentLines[i].length + 1; // +1 for newline
+        offset += line.length + 1; // +1 for newline
       }
 
       state.lineMax = contentLines.length;
@@ -366,12 +472,35 @@ const createObsidianCalloutRule = (
 };
 
 /**
- * Main plugin function
+ * Main plugin function for markdown-it admonitions
+ * 
+ * Adds support for admonition/callout blocks in two syntax styles:
+ * - Docusaurus-style: `::: type Title\nContent\n:::`
+ * - Obsidian-style: `> [!type] Title\n> Content`
+ * 
+ * @param md - The markdown-it instance
+ * @param options - Plugin configuration options
+ * @throws {TypeError} if options are invalid
+ * 
+ * @example
+ * ```typescript
+ * import MarkdownIt from 'markdown-it';
+ * import admonitionPlugin from 'markdown-it-admonitions';
+ * 
+ * const md = new MarkdownIt();
+ * md.use(admonitionPlugin, {
+ *   types: ['note', 'warning'],
+ *   icons: { note: '📝' }
+ * });
+ * ```
  */
 export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
   md: MarkdownIt,
   options: AdmonitionPluginOptions = {},
-) => {
+): void => {
+  // Validate options
+  validatePluginOptions(options);
+
   const {
     types = defaultTypes,
     icons = defaultIcons,
@@ -381,11 +510,18 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
     docusaurusStyle = true,
   } = options;
 
-  const mergedIcons = { ...defaultIcons, ...icons };
+  // Ensure at least one syntax style is enabled
+  if (!obsidianStyle && !docusaurusStyle) {
+    throw new TypeError("At least one of obsidianStyle or docusaurusStyle must be enabled");
+  }
+
+  // Create type-safe copies
+  const typesArray: readonly string[] = Array.isArray(types) ? types : defaultTypes;
+  const mergedIcons: Readonly<Record<string, string>> = { ...defaultIcons, ...icons };
 
   // Register Docusaurus-style syntax for each admonition type
   if (docusaurusStyle) {
-    for (const type of types) {
+    for (const type of typesArray) {
       const containerOptions: MarkdownItAdmonitionOptions = {
         name: type,
         marker,
@@ -422,13 +558,13 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
 
   // Register Obsidian-style syntax
   if (obsidianStyle) {
-    const obsidianRule = createObsidianCalloutRule(types);
+    const obsidianRule = createObsidianCalloutRule(typesArray);
     md.block.ruler.before("blockquote", "obsidian_callout", obsidianRule, {
       alt: ["paragraph", "reference", "blockquote", "list"],
     });
 
     // Set up render rules for each type (shared with container style)
-    for (const type of types) {
+    for (const type of typesArray) {
       if (!md.renderer.rules[`admonition_${type}_open`]) {
         const customOpen = customRenders[type]?.open;
         const customClose = customRenders[type]?.close;
@@ -445,5 +581,14 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
 };
 
 export default admonitionPlugin;
-export type { AdmonitionPluginOptions, MarkdownItAdmonitionOptions, RenderFunction };
+
+// Export all types for users
+export type { 
+  AdmonitionPluginOptions, 
+  MarkdownItAdmonitionOptions, 
+  RenderFunction,
+  RenderEnvironment,
+  ValidateFunction,
+  CustomRenderPair,
+};
 
