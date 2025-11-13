@@ -33,7 +33,7 @@ const getLineIndent = (state: StateBlock, line: number): number =>
 /**
  * Check if marker sequence matches at given position
  * @param state - Parser state
- * @param pos - Starting position
+ * @param position - Starting position
  * @param max - Maximum position
  * @param marker - Marker string to match
  * @param markerLength - Length of marker
@@ -41,20 +41,20 @@ const getLineIndent = (state: StateBlock, line: number): number =>
  */
 const matchMarkerSequence = (
   state: StateBlock,
-  pos: number,
+  position: number,
   max: number,
   marker: string,
   markerLength: number,
-  startPos: number,
+  startPosition: number,
 ): number => {
-  let checkPos = pos;
-  while (checkPos <= max) {
-    if (marker[(checkPos - startPos) % markerLength] !== state.src[checkPos]) {
+  let checkPosition = position;
+  while (checkPosition <= max) {
+    if (marker[(checkPosition - startPosition) % markerLength] !== state.src[checkPosition]) {
       break;
     }
-    checkPos++;
+    checkPosition++;
   }
-  return checkPos;
+  return checkPosition;
 };
 
 /**
@@ -215,7 +215,7 @@ const createAdmonitionContainer = (
     if (markerStart !== state.src[currentLineStart]) return false;
 
     // Check out the rest of the marker string
-    let pos = matchMarkerSequence(
+    let position = matchMarkerSequence(
       state,
       currentLineStart + 1,
       currentLineMax,
@@ -224,14 +224,14 @@ const createAdmonitionContainer = (
       currentLineStart,
     );
 
-    const markerCount = Math.floor((pos - currentLineStart) / markerLength);
+    const markerCount = Math.floor((position - currentLineStart) / markerLength);
 
     if (markerCount < MIN_MARKER_NUM) return false;
 
-    pos -= (pos - currentLineStart) % markerLength;
+    position -= (position - currentLineStart) % markerLength;
 
     const markup = marker.repeat(markerCount);
-    const params = state.src.slice(pos, currentLineMax);
+    const params = state.src.slice(position, currentLineMax);
 
     if (!validate(params, markup)) return false;
 
@@ -269,7 +269,7 @@ const createAdmonitionContainer = (
         markerStart === state.src[nextLineStart]
       ) {
         // check rest of marker
-        pos = matchMarkerSequence(
+        position = matchMarkerSequence(
           state,
           nextLineStart + 1,
           nextLineMax,
@@ -279,12 +279,12 @@ const createAdmonitionContainer = (
         );
 
         // closing code fence must be at least as long as the opening one
-        if (Math.floor((pos - nextLineStart) / markerLength) >= markerCount) {
+        if (Math.floor((position - nextLineStart) / markerLength) >= markerCount) {
           // make sure tail has spaces only
-          pos -= (pos - nextLineStart) % markerLength;
-          pos = state.skipSpaces(pos);
+          position -= (position - nextLineStart) % markerLength;
+          position = state.skipSpaces(position);
 
-          if (pos >= nextLineMax) {
+          if (position >= nextLineMax) {
             // found!
             autoClosed = true;
             break;
@@ -442,41 +442,41 @@ const createObsidianCalloutRule = (
     endLine: number,
     silent: boolean,
   ): boolean => {
-    const pos = getLineStart(state, startLine);
+    const position = getLineStart(state, startLine);
     const max = getLineEnd(state, startLine);
 
     // Check if line starts with >
-    if (state.src[pos] !== ">") return false;
+    if (state.src[position] !== ">") return false;
 
     // Get the content after >
-    let linePos = pos + 1;
+    let linePosition = position + 1;
     
     // Skip optional space after >
-    if (state.src[linePos] === " ") linePos++;
+    if (state.src[linePosition] === " ") linePosition++;
 
     // Check for [!type] pattern
-    if (state.src[linePos] !== "[" || state.src[linePos + 1] !== "!") {
+    if (state.src[linePosition] !== "[" || state.src[linePosition + 1] !== "!") {
       return false;
     }
 
     // Find the closing ]
-    let typeEnd = linePos + 2;
-    while (typeEnd < max && state.src[typeEnd] !== "]") {
-      typeEnd++;
+    let typeEndPosition = linePosition + 2;
+    while (typeEndPosition < max && state.src[typeEndPosition] !== "]") {
+      typeEndPosition++;
     }
 
-    if (typeEnd >= max) return false;
+    if (typeEndPosition >= max) return false;
 
     // Extract the type
-    const calloutType = state.src.slice(linePos + 2, typeEnd).toLowerCase();
+    const calloutType = state.src.slice(linePosition + 2, typeEndPosition).toLowerCase();
 
     // Validate against registered types
     if (!types.includes(calloutType)) return false;
 
     // Extract optional title
     let title = "";
-    if (typeEnd + 1 < max) {
-      title = state.src.slice(typeEnd + 1, max).trim();
+    if (typeEndPosition + 1 < max) {
+      title = state.src.slice(typeEndPosition + 1, max).trim();
     }
 
     if (silent) return true;
@@ -486,17 +486,17 @@ const createObsidianCalloutRule = (
     const contentLines: string[] = [];
 
     while (nextLine < endLine) {
-      const nextPos = getLineStart(state, nextLine);
+      const nextPosition = getLineStart(state, nextLine);
       const nextMax = getLineEnd(state, nextLine);
 
       // Check if line starts with >
-      if (state.src[nextPos] !== ">") break;
+      if (state.src[nextPosition] !== ">") break;
 
       // Extract content after > (and optional space)
-      let contentStart = nextPos + 1;
-      if (state.src[contentStart] === " ") contentStart++;
+      let contentStartPosition = nextPosition + 1;
+      if (state.src[contentStartPosition] === " ") contentStartPosition++;
 
-      contentLines.push(state.src.slice(contentStart, nextMax));
+      contentLines.push(state.src.slice(contentStartPosition, nextMax));
       nextLine++;
     }
 
