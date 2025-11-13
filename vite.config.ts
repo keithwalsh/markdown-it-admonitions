@@ -18,6 +18,7 @@ export default defineConfig({
       // Externalize peer dependencies
       external: ['markdown-it'],
       output: {
+        exports: 'named',
         globals: {
           'markdown-it': 'MarkdownIt'
         }
