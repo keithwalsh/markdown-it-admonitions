@@ -68,6 +68,9 @@ interface SavedState {
 
 /**
  * Save relevant state properties
+ * 
+ * @param state - Parser state to save
+ * @returns Saved state properties that can be restored later
  */
 const saveState = (state: StateBlock): SavedState => ({
   parentType: state.parentType,
@@ -77,6 +80,9 @@ const saveState = (state: StateBlock): SavedState => ({
 
 /**
  * Restore previously saved state properties
+ * 
+ * @param state - Parser state to restore to
+ * @param saved - Previously saved state properties
  */
 const restoreState = (state: StateBlock, saved: SavedState): void => {
   state.parentType = saved.parentType;
@@ -107,17 +113,106 @@ const isStringArray = (value: unknown): value is string[] => {
 };
 
 /**
- * Validates plugin options at runtime
- * @throws {TypeError} if options are invalid
+ * Type guard to check if a value is a boolean
+ */
+const isBoolean = (value: unknown): value is boolean => {
+  return typeof value === "boolean";
+};
+
+/**
+ * Type guard to check if a value is a valid object (not null, not array)
+ */
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+/**
+ * Validates that types array contains only non-empty strings
+ * @throws {TypeError} if types are invalid
+ */
+const validateTypes = (types: unknown): void => {
+  if (!isStringArray(types)) {
+    throw new TypeError("options.types must be an array of strings");
+  }
+  if (types.some((type) => !isNonEmptyString(type))) {
+    throw new TypeError("All type names must be non-empty strings");
+  }
+};
+
+/**
+ * Validates icon mapping object
+ * @throws {TypeError} if icons object is invalid
+ */
+const validateIcons = (icons: unknown): void => {
+  if (!isPlainObject(icons)) {
+    throw new TypeError("options.icons must be an object");
+  }
+  for (const [key, value] of Object.entries(icons)) {
+    if (!isNonEmptyString(key) || typeof value !== "string") {
+      throw new TypeError("options.icons must map string keys to string values");
+    }
+  }
+};
+
+/**
+ * Validates custom render pair for symmetry
+ * Ensures both open and close functions are provided together
+ * @throws {TypeError} if render pair is asymmetric or invalid
+ */
+const validateRenderPair = (key: string, pair: CustomRenderPair): void => {
+  if (!isNonEmptyString(key)) {
+    throw new TypeError("customRenders keys must be non-empty strings");
+  }
+  
+  const hasOpen = pair.open !== undefined;
+  const hasClose = pair.close !== undefined;
+  
+  // Enforce symmetric render pair: both open and close must be provided together
+  if (hasOpen && !hasClose) {
+    throw new TypeError(
+      `customRenders.${key} has 'open' but missing 'close'. ` +
+      `Both must be provided together for symmetric rendering to ensure proper HTML structure.`
+    );
+  }
+  
+  if (hasClose && !hasOpen) {
+    throw new TypeError(
+      `customRenders.${key} has 'close' but missing 'open'. ` +
+      `Both must be provided together for symmetric rendering to ensure proper HTML structure.`
+    );
+  }
+  
+  // Type validation for render functions
+  if (hasOpen && typeof pair.open !== "function") {
+    throw new TypeError(`customRenders.${key}.open must be a function`);
+  }
+  if (hasClose && typeof pair.close !== "function") {
+    throw new TypeError(`customRenders.${key}.close must be a function`);
+  }
+};
+
+/**
+ * Validates custom renders object
+ * @throws {TypeError} if customRenders object or any render pair is invalid
+ */
+const validateCustomRenders = (customRenders: unknown): void => {
+  if (!isPlainObject(customRenders)) {
+    throw new TypeError("options.customRenders must be an object");
+  }
+  
+  for (const [key, value] of Object.entries(customRenders)) {
+    validateRenderPair(key, value as CustomRenderPair);
+  }
+};
+
+/**
+ * Validates plugin options at runtime with emphasis on symmetric operations
+ * 
+ * @throws {TypeError} if options violate symmetry principles or are invalid
  */
 const validatePluginOptions = (options: AdmonitionPluginOptions): void => {
   if (options.types !== undefined) {
-    if (!isStringArray(options.types)) {
-      throw new TypeError("options.types must be an array of strings");
-    }
-    if (options.types.some((type) => !isNonEmptyString(type))) {
-      throw new TypeError("All type names must be non-empty strings");
-    }
+    validateTypes(options.types);
   }
 
   if (options.marker !== undefined && !isNonEmptyString(options.marker)) {
@@ -125,39 +220,39 @@ const validatePluginOptions = (options: AdmonitionPluginOptions): void => {
   }
 
   if (options.icons !== undefined) {
-    if (typeof options.icons !== "object" || options.icons === null) {
-      throw new TypeError("options.icons must be an object");
-    }
-    for (const [key, value] of Object.entries(options.icons)) {
-      if (!isNonEmptyString(key) || typeof value !== "string") {
-        throw new TypeError("options.icons must map string keys to string values");
-      }
-    }
+    validateIcons(options.icons);
   }
 
-  if (options.obsidianStyle !== undefined && typeof options.obsidianStyle !== "boolean") {
+  if (options.obsidianStyle !== undefined && !isBoolean(options.obsidianStyle)) {
     throw new TypeError("options.obsidianStyle must be a boolean");
   }
 
-  if (options.docusaurusStyle !== undefined && typeof options.docusaurusStyle !== "boolean") {
+  if (options.docusaurusStyle !== undefined && !isBoolean(options.docusaurusStyle)) {
     throw new TypeError("options.docusaurusStyle must be a boolean");
   }
 
   if (options.customRenders !== undefined) {
-    if (typeof options.customRenders !== "object" || options.customRenders === null) {
-      throw new TypeError("options.customRenders must be an object");
-    }
-    for (const [key, value] of Object.entries(options.customRenders)) {
-      if (!isNonEmptyString(key)) {
-        throw new TypeError("customRenders keys must be non-empty strings");
-      }
-      if (value.open !== undefined && typeof value.open !== "function") {
-        throw new TypeError(`customRenders.${key}.open must be a function`);
-      }
-      if (value.close !== undefined && typeof value.close !== "function") {
-        throw new TypeError(`customRenders.${key}.close must be a function`);
-      }
-    }
+    validateCustomRenders(options.customRenders);
+  }
+};
+
+/**
+ * Validates that complementary configuration options maintain symmetry
+ * Ensures at least one syntax style is enabled to prevent incomplete plugin setup
+ * 
+ * @param obsidianStyle - Whether Obsidian-style syntax is enabled
+ * @param docusaurusStyle - Whether Docusaurus-style syntax is enabled
+ * @throws {TypeError} if no syntax styles are enabled (incomplete configuration)
+ */
+const validateComplementaryOptions = (
+  obsidianStyle: boolean,
+  docusaurusStyle: boolean,
+): void => {
+  if (!obsidianStyle && !docusaurusStyle) {
+    throw new TypeError(
+      "At least one of options.obsidianStyle or options.docusaurusStyle must be enabled. " +
+      "Disabling both syntax styles prevents the plugin from functioning."
+    );
   }
 };
 
@@ -174,6 +269,101 @@ const escapeHtml = (text: string): string => {
 };
 
 /**
+ * Interface for token creation parameters
+ */
+interface TokenCreationParams {
+  state: StateBlock;
+  name: string;
+  markup: string;
+  info: string;
+  startLine: number;
+  endLine: number;
+}
+
+/**
+ * Creates symmetric opening and closing tokens for an admonition block
+ * Ensures proper nesting levels (+1 for open, -1 for close)
+ * @returns Object containing the created open and close tokens
+ */
+const createAdmonitionTokens = (params: TokenCreationParams): { open: Token; close: Token } => {
+  const { state, name, markup, info, startLine, endLine } = params;
+  
+  const openToken = state.push(`admonition_${name}_open`, "div", 1);
+  openToken.markup = markup;
+  openToken.block = true;
+  openToken.info = info;
+  openToken.map = [startLine, endLine];
+  
+  const closeToken = state.push(`admonition_${name}_close`, "div", -1);
+  closeToken.markup = markup;
+  closeToken.block = true;
+  
+  return { open: openToken, close: closeToken };
+};
+
+/**
+ * Interface for closing fence search result
+ */
+interface ClosingFenceResult {
+  found: boolean;
+  nextLine: number;
+}
+
+/**
+ * Searches for the closing fence of an admonition container
+ * Extracted to reduce complexity in createAdmonitionContainer
+ */
+const findClosingFence = (
+  state: StateBlock,
+  startLine: number,
+  endLine: number,
+  currentLineIndent: number,
+  markerStart: string,
+  marker: string,
+  markerLength: number,
+  markerCount: number,
+): ClosingFenceResult => {
+  let nextLine = startLine + 1;
+
+  for (; nextLine < endLine; nextLine++) {
+    const nextLineStart = getLineStart(state, nextLine);
+    const nextLineMax = getLineEnd(state, nextLine);
+
+    // Non-empty line with negative indent should stop the search
+    if (nextLineStart < nextLineMax && getLineIndent(state, nextLine) < currentLineIndent) {
+      break;
+    }
+
+    // Check if this line could be a closing fence
+    if (
+      getLineIndent(state, nextLine) === currentLineIndent &&
+      markerStart === state.src[nextLineStart]
+    ) {
+      let position = matchMarkerSequence(
+        state,
+        nextLineStart + 1,
+        nextLineMax,
+        marker,
+        markerLength,
+        nextLineStart,
+      );
+
+      // Closing fence must be at least as long as the opening one
+      if (Math.floor((position - nextLineStart) / markerLength) >= markerCount) {
+        position -= (position - nextLineStart) % markerLength;
+        position = state.skipSpaces(position);
+
+        if (position >= nextLineMax) {
+          return { found: true, nextLine };
+        }
+      }
+    }
+  }
+
+  return { found: false, nextLine };
+};
+
+/**
  * Create a container rule for a specific admonition type
  * @param options - Configuration for the admonition container
  * @returns A RuleBlock function that parses the admonition syntax
@@ -184,10 +374,10 @@ const createAdmonitionContainer = (
 ): RuleBlock => {
   // Validate options
   if (!isNonEmptyString(options.name)) {
-    throw new TypeError("Admonition name must be a non-empty string");
+    throw new TypeError("Container options.name must be a non-empty string");
   }
   if (options.marker !== undefined && !isNonEmptyString(options.marker)) {
-    throw new TypeError("Marker must be a non-empty string");
+    throw new TypeError("Container options.marker must be a non-empty string");
   }
 
   const {
@@ -197,7 +387,7 @@ const createAdmonitionContainer = (
       params.trim().split(" ", 2)[0] === name,
   } = options;
 
-  const markerStart = marker[0];
+  const markerStart = marker[0]!; // Safe: marker is validated to be non-empty
   const markerLength = marker.length;
 
   const container: RuleBlock = (
@@ -210,8 +400,7 @@ const createAdmonitionContainer = (
     const currentLineMax = getLineEnd(state, startLine);
     const currentLineIndent = getLineIndent(state, startLine);
 
-    // Check out the first character quickly,
-    // this should filter out most of non-containers
+    // Check out the first character quickly to filter out most non-containers
     if (markerStart !== state.src[currentLineStart]) return false;
 
     // Check out the rest of the marker string
@@ -225,100 +414,46 @@ const createAdmonitionContainer = (
     );
 
     const markerCount = Math.floor((position - currentLineStart) / markerLength);
-
     if (markerCount < MIN_MARKER_NUM) return false;
 
     position -= (position - currentLineStart) % markerLength;
-
     const markup = marker.repeat(markerCount);
     const params = state.src.slice(position, currentLineMax);
 
     if (!validate(params, markup)) return false;
-
-    // Since start is found, we can report success here in validation mode
     if (silent) return true;
 
-    let nextLine = startLine + 1;
-    let autoClosed = false;
-
-    // Search for the end of the block
-    for (
-      ;
-      // nextLine should be accessible outside the loop,
-      // unclosed block should be auto closed by end of document.
-      // also block seems to be auto closed by end of parent
-      nextLine < endLine;
-      nextLine++
-    ) {
-      const nextLineStart = getLineStart(state, nextLine);
-      const nextLineMax = getLineEnd(state, nextLine);
-
-      if (
-        nextLineStart < nextLineMax &&
-        getLineIndent(state, nextLine) < currentLineIndent
-      )
-        // non-empty line with negative indent should stop the list:
-        // - :::
-        //  test
-        break;
-
-      if (
-        // closing fence should be indented same as opening one
-        getLineIndent(state, nextLine) === currentLineIndent &&
-        // match start
-        markerStart === state.src[nextLineStart]
-      ) {
-        // check rest of marker
-        position = matchMarkerSequence(
-          state,
-          nextLineStart + 1,
-          nextLineMax,
-          marker,
-          markerLength,
-          nextLineStart,
-        );
-
-        // closing code fence must be at least as long as the opening one
-        if (Math.floor((position - nextLineStart) / markerLength) >= markerCount) {
-          // make sure tail has spaces only
-          position -= (position - nextLineStart) % markerLength;
-          position = state.skipSpaces(position);
-
-          if (position >= nextLineMax) {
-            // found!
-            autoClosed = true;
-            break;
-          }
-        }
-      }
-    }
+    // Search for the closing fence
+    const closingFence = findClosingFence(
+      state,
+      startLine,
+      endLine,
+      currentLineIndent,
+      markerStart,
+      marker,
+      markerLength,
+      markerCount,
+    );
 
     const savedState = saveState(state);
 
     state.parentType = "container" as typeof state.parentType;
-
-    // this will prevent lazy continuations from ever going past our end marker
-    state.lineMax = nextLine;
-
-    // this will update the block indent
+    state.lineMax = closingFence.nextLine;
     state.blkIndent = currentLineIndent ?? 0;
 
-    const openToken = state.push(`admonition_${name}_open`, "div", 1);
+    createAdmonitionTokens({
+      state,
+      name,
+      markup,
+      info: params,
+      startLine,
+      endLine: closingFence.nextLine,
+    });
 
-    openToken.markup = markup;
-    openToken.block = true;
-    openToken.info = params;
-    openToken.map = [startLine, nextLine];
-
-    state.md.block.tokenize(state, startLine + 1, nextLine);
-
-    const closeToken = state.push(`admonition_${name}_close`, "div", -1);
-
-    closeToken.markup = markup;
-    closeToken.block = true;
+    state.md.block.tokenize(state, startLine + 1, closingFence.nextLine);
 
     restoreState(state, savedState);
-    state.line = nextLine + (autoClosed ? 1 : 0);
+    state.line = closingFence.nextLine + (closingFence.found ? 1 : 0);
 
     return true;
   };
@@ -327,18 +462,28 @@ const createAdmonitionContainer = (
 };
 
 /**
- * Default render function for opening admonition tag
+ * Symmetric render pair interface to ensure open/close renders match
+ */
+interface RenderPair {
+  open: RenderFunction;
+  close: RenderFunction;
+}
+
+/**
+ * Create symmetric render pair for an admonition type
+ * Ensures that open and close renders are properly matched
  * @param name - The admonition type name
  * @param icon - Optional icon to display
- * @param renderTitle - Whether to render the title section
- * @returns A render function
+ * @param renderTitle - Whether to render the title section (must be symmetric)
+ * @returns A matched pair of open and close render functions
  */
-const defaultOpenRender = (
+const createDefaultRenderPair = (
   name: string,
   icon?: string,
   renderTitle: boolean = true,
-): RenderFunction => {
-  return (
+): RenderPair => {
+  // Open render function
+  const open: RenderFunction = (
     tokens: Token[],
     index: number,
     _options: Options,
@@ -371,15 +516,9 @@ const defaultOpenRender = (
 
     return result;
   };
-};
 
-/**
- * Default render function for closing admonition tag
- * @param renderTitle - Whether the opening tag rendered a title section
- * @returns A render function
- */
-const defaultCloseRender = (renderTitle: boolean = true): RenderFunction => {
-  return (
+  // Close render function (symmetric with open)
+  const close: RenderFunction = (
     tokens: Token[],
     index: number,
     options: Options,
@@ -388,19 +527,23 @@ const defaultCloseRender = (renderTitle: boolean = true): RenderFunction => {
   ): string => {
     let result = "";
     if (renderTitle) {
-      result += "</div>\n"; // close admonition-content
+      result += "</div>\n"; // close admonition-content (matches open)
     }
     result += slf.renderToken(tokens, index, options);
     return result;
   };
+
+  // Return symmetric pair
+  return { open, close };
 };
 
 /**
- * Helper function to register render rules for an admonition type
+ * Helper function to register symmetric render rules for an admonition type
+ * Ensures that open and close render functions are always properly paired
  * @param md - The markdown-it instance
  * @param type - The admonition type name
  * @param mergedIcons - Icon mapping for admonition types
- * @param customRenders - Custom render functions
+ * @param customRenders - Custom render functions (must provide both open and close together)
  */
 const registerRenderRules = (
   md: MarkdownIt,
@@ -408,16 +551,168 @@ const registerRenderRules = (
   mergedIcons: Readonly<Record<string, string>>,
   customRenders: Readonly<Record<string, CustomRenderPair>>,
 ): void => {
-  if (!md.renderer.rules[`admonition_${type}_open`]) {
-    const customOpen = customRenders[type]?.open;
-    const customClose = customRenders[type]?.close;
-
-    md.renderer.rules[`admonition_${type}_open`] =
-      customOpen || defaultOpenRender(type, mergedIcons[type], true);
-
-    md.renderer.rules[`admonition_${type}_close`] =
-      customClose || defaultCloseRender(true);
+  // Skip if already registered
+  if (md.renderer.rules[`admonition_${type}_open`]) {
+    return;
   }
+
+  // Get custom render pair (validated to have both open and close, or neither)
+  const customRenderPair = customRenders[type];
+
+  // Use symmetric render pair: either custom (both open and close) or default (both open and close)
+  if (customRenderPair?.open && customRenderPair?.close) {
+    // Custom renders are validated to be provided as a symmetric pair
+    md.renderer.rules[`admonition_${type}_open`] = customRenderPair.open;
+    md.renderer.rules[`admonition_${type}_close`] = customRenderPair.close;
+  } else {
+    // Create default symmetric render pair
+    const defaultPair = createDefaultRenderPair(type, mergedIcons[type], true);
+    md.renderer.rules[`admonition_${type}_open`] = defaultPair.open;
+    md.renderer.rules[`admonition_${type}_close`] = defaultPair.close;
+  }
+};
+
+/**
+ * Interface for Obsidian callout parsing result
+ */
+interface ObsidianCalloutInfo {
+  calloutType: string;
+  title: string;
+}
+
+/**
+ * Parses the [!type] pattern from an Obsidian callout line
+ * @returns Callout info if valid pattern found, null otherwise
+ */
+const parseObsidianCalloutType = (
+  state: StateBlock,
+  startLine: number,
+  types: readonly string[],
+): ObsidianCalloutInfo | null => {
+  const position = getLineStart(state, startLine);
+  const max = getLineEnd(state, startLine);
+
+  // Check if line starts with >
+  if (state.src[position] !== ">") return null;
+
+  let linePosition = position + 1;
+  
+  // Skip optional space after >
+  if (state.src[linePosition] === " ") linePosition++;
+
+  // Check for [!type] pattern
+  if (state.src[linePosition] !== "[" || state.src[linePosition + 1] !== "!") {
+    return null;
+  }
+
+  // Find the closing ]
+  let typeEndPosition = linePosition + 2;
+  while (typeEndPosition < max && state.src[typeEndPosition] !== "]") {
+    typeEndPosition++;
+  }
+
+  if (typeEndPosition >= max) return null;
+
+  // Extract and validate the type
+  const calloutType = state.src.slice(linePosition + 2, typeEndPosition).toLowerCase();
+  if (!types.includes(calloutType)) return null;
+
+  // Extract optional title
+  const title = typeEndPosition + 1 < max 
+    ? state.src.slice(typeEndPosition + 1, max).trim()
+    : "";
+
+  return { calloutType, title };
+};
+
+/**
+ * Extracts content lines from an Obsidian blockquote
+ * Collects all lines starting with > until a non-blockquote line is found
+ */
+const extractObsidianContent = (
+  state: StateBlock,
+  startLine: number,
+  endLine: number,
+): { contentLines: string[]; nextLine: number } => {
+  const contentLines: string[] = [];
+  let nextLine = startLine + 1;
+
+  while (nextLine < endLine) {
+    const nextPosition = getLineStart(state, nextLine);
+    const nextMax = getLineEnd(state, nextLine);
+
+    if (state.src[nextPosition] !== ">") break;
+
+    let contentStartPosition = nextPosition + 1;
+    if (state.src[contentStartPosition] === " ") contentStartPosition++;
+
+    contentLines.push(state.src.slice(contentStartPosition, nextMax));
+    nextLine++;
+  }
+
+  return { contentLines, nextLine };
+};
+
+/**
+ * Interface for saved parsing arrays
+ */
+interface SavedParsingArrays {
+  src: string;
+  bMarks: number[];
+  eMarks: number[];
+  tShift: number[];
+  sCount: number[];
+}
+
+/**
+ * Processes content lines by temporarily replacing state parsing arrays
+ * SYMMETRIC OPERATION: Saves and restores parsing context
+ */
+const processContentWithTemporaryState = (
+  state: StateBlock,
+  contentLines: string[],
+): void => {
+  if (contentLines.length === 0) return;
+
+  const contentSrc = contentLines.join("\n");
+  
+  // SYMMETRIC OPERATION: Save original parsing arrays
+  const saved: SavedParsingArrays = {
+    src: state.src,
+    bMarks: state.bMarks,
+    eMarks: state.eMarks,
+    tShift: state.tShift,
+    sCount: state.sCount,
+  };
+
+  // Set up temporary state for content processing
+  state.src = contentSrc;
+  state.bMarks = [];
+  state.eMarks = [];
+  state.tShift = [];
+  state.sCount = [];
+
+  let offset = 0;
+  for (let i = 0; i < contentLines.length; i++) {
+    const line = contentLines[i];
+    if (line === undefined) continue;
+    
+    state.bMarks.push(offset);
+    state.eMarks.push(offset + line.length);
+    state.tShift.push(0);
+    state.sCount.push(0);
+    offset += line.length + 1;
+  }
+
+  state.lineMax = contentLines.length;
+  state.md.block.tokenize(state, 0, contentLines.length);
+
+  // SYMMETRIC OPERATION: Restore original parsing arrays
+  state.src = saved.src;
+  state.bMarks = saved.bMarks;
+  state.eMarks = saved.eMarks;
+  state.tShift = saved.tShift;
+  state.sCount = saved.sCount;
 };
 
 /**
@@ -431,128 +726,45 @@ const createObsidianCalloutRule = (
 ): RuleBlock => {
   // Validate types array
   if (!Array.isArray(types) || types.length === 0) {
-    throw new TypeError("types must be a non-empty array");
+    throw new TypeError("Callout rule types parameter must be a non-empty array");
   }
   if (!types.every(isNonEmptyString)) {
-    throw new TypeError("All types must be non-empty strings");
+    throw new TypeError("Callout rule types parameter must contain only non-empty strings");
   }
+
   const obsidianCallout: RuleBlock = (
     state: StateBlock,
     startLine: number,
     endLine: number,
     silent: boolean,
   ): boolean => {
-    const position = getLineStart(state, startLine);
-    const max = getLineEnd(state, startLine);
-
-    // Check if line starts with >
-    if (state.src[position] !== ">") return false;
-
-    // Get the content after >
-    let linePosition = position + 1;
-    
-    // Skip optional space after >
-    if (state.src[linePosition] === " ") linePosition++;
-
-    // Check for [!type] pattern
-    if (state.src[linePosition] !== "[" || state.src[linePosition + 1] !== "!") {
-      return false;
-    }
-
-    // Find the closing ]
-    let typeEndPosition = linePosition + 2;
-    while (typeEndPosition < max && state.src[typeEndPosition] !== "]") {
-      typeEndPosition++;
-    }
-
-    if (typeEndPosition >= max) return false;
-
-    // Extract the type
-    const calloutType = state.src.slice(linePosition + 2, typeEndPosition).toLowerCase();
-
-    // Validate against registered types
-    if (!types.includes(calloutType)) return false;
-
-    // Extract optional title
-    let title = "";
-    if (typeEndPosition + 1 < max) {
-      title = state.src.slice(typeEndPosition + 1, max).trim();
-    }
+    // Parse callout type and title
+    const calloutInfo = parseObsidianCalloutType(state, startLine, types);
+    if (!calloutInfo) return false;
 
     if (silent) return true;
 
-    // Find all lines that are part of this blockquote
-    let nextLine = startLine + 1;
-    const contentLines: string[] = [];
+    // Extract content lines
+    const { contentLines, nextLine } = extractObsidianContent(state, startLine, endLine);
 
-    while (nextLine < endLine) {
-      const nextPosition = getLineStart(state, nextLine);
-      const nextMax = getLineEnd(state, nextLine);
-
-      // Check if line starts with >
-      if (state.src[nextPosition] !== ">") break;
-
-      // Extract content after > (and optional space)
-      let contentStartPosition = nextPosition + 1;
-      if (state.src[contentStartPosition] === " ") contentStartPosition++;
-
-      contentLines.push(state.src.slice(contentStartPosition, nextMax));
-      nextLine++;
-    }
-
+    // SYMMETRIC OPERATION: Save state before modifications
     const savedState = saveState(state);
-
     state.parentType = "blockquote" as typeof state.parentType;
 
-    // Create opening token
-    const openToken = state.push(`admonition_${calloutType}_open`, "div", 1);
-    openToken.markup = ">";
-    openToken.block = true;
-    openToken.info = title;
-    openToken.map = [startLine, nextLine];
+    // Create symmetric token pair
+    createAdmonitionTokens({
+      state,
+      name: calloutInfo.calloutType,
+      markup: ">",
+      info: calloutInfo.title,
+      startLine,
+      endLine: nextLine,
+    });
 
-    // Process content lines
-    if (contentLines.length > 0) {
-      const contentSrc = contentLines.join("\n");
-      const oldSrc = state.src;
-      const oldBMarks = state.bMarks;
-      const oldEMarks = state.eMarks;
-      const oldTShift = state.tShift;
-      const oldSCount = state.sCount;
+    // Process content with temporary state
+    processContentWithTemporaryState(state, contentLines);
 
-      state.src = contentSrc;
-      state.bMarks = [];
-      state.eMarks = [];
-      state.tShift = [];
-      state.sCount = [];
-
-      let offset = 0;
-      for (let i = 0; i < contentLines.length; i++) {
-        const line = contentLines[i];
-        if (line === undefined) continue;
-        
-        state.bMarks.push(offset);
-        state.eMarks.push(offset + line.length);
-        state.tShift.push(0);
-        state.sCount.push(0);
-        offset += line.length + 1; // +1 for newline
-      }
-
-      state.lineMax = contentLines.length;
-      state.md.block.tokenize(state, 0, contentLines.length);
-
-      state.src = oldSrc;
-      state.bMarks = oldBMarks;
-      state.eMarks = oldEMarks;
-      state.tShift = oldTShift;
-      state.sCount = oldSCount;
-    }
-
-    // Create closing token
-    const closeToken = state.push(`admonition_${calloutType}_close`, "div", -1);
-    closeToken.markup = ">";
-    closeToken.block = true;
-
+    // SYMMETRIC OPERATION: Restore state after modifications
     restoreState(state, savedState);
     state.line = nextLine;
 
@@ -589,7 +801,7 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
   md: MarkdownIt,
   options: AdmonitionPluginOptions = {},
 ): void => {
-  // Validate options
+  // Validate options for symmetry and correctness
   validatePluginOptions(options);
 
   const {
@@ -601,10 +813,8 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
     docusaurusStyle = true,
   } = options;
 
-  // Ensure at least one syntax style is enabled
-  if (!obsidianStyle && !docusaurusStyle) {
-    throw new TypeError("At least one of obsidianStyle or docusaurusStyle must be enabled");
-  }
+  // SYMMETRY VALIDATION: Ensure at least one complete syntax style is enabled
+  validateComplementaryOptions(obsidianStyle, docusaurusStyle);
 
   // Create type-safe copies
   const typesArray: readonly string[] = Array.isArray(types) ? types : defaultTypes;

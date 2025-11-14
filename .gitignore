@@ -4,3 +4,6 @@ dist
 !/.gitignore
 !.npmignore
 !.github
+
+# Auto-generated minified CSS
+admonitions.min.css

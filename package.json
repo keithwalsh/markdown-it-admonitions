@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-admonitions",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A markdown-it plugin for rendering admonitions",
   "type": "module",
   "keywords": [
@@ -29,14 +29,19 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./admonitions.css": "./admonitions.css",
+    "./admonitions.min.css": "./admonitions.min.css"
   },
   "files": [
-    "dist"
+    "dist",
+    "admonitions.css",
+    "admonitions.min.css"
   ],
   "scripts": {
     "dev": "vite build --watch",
-    "build": "vite build",
+    "build": "vite build && npm run build:css",
+    "build:css": "csso admonitions.css -o admonitions.min.css",
     "preview": "vite preview"
   },
   "peerDependencies": {
@@ -44,10 +49,10 @@
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
+    "csso-cli": "^4.0.2",
     "markdown-it": "^14.1.0",
     "typescript": "^5.6.3",
     "vite": "^6.0.1",
     "vite-plugin-dts": "^4.3.0"
   }
 }
-
