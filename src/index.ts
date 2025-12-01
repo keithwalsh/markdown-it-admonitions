@@ -751,18 +751,23 @@ const createObsidianCalloutRule = (
     const savedState = saveState(state);
     state.parentType = "blockquote" as typeof state.parentType;
 
-    // Create symmetric token pair
-    createAdmonitionTokens({
-      state,
-      name: calloutInfo.calloutType,
-      markup: ">",
-      info: calloutInfo.title,
-      startLine,
-      endLine: nextLine,
-    });
+    const calloutTypeName = calloutInfo.calloutType;
+    const info = calloutTypeName + (calloutInfo.title ? " " + calloutInfo.title : "");
 
-    // Process content with temporary state
+    // Push OPEN token first
+    const openToken = state.push(`admonition_${calloutTypeName}_open`, "div", 1);
+    openToken.markup = ">";
+    openToken.block = true;
+    openToken.info = info;
+    openToken.map = [startLine, nextLine];
+
+    // Process content BETWEEN open and close tokens
     processContentWithTemporaryState(state, contentLines);
+
+    // Push CLOSE token after content
+    const closeToken = state.push(`admonition_${calloutTypeName}_close`, "div", -1);
+    closeToken.markup = ">";
+    closeToken.block = true;
 
     // SYMMETRIC OPERATION: Restore state after modifications
     restoreState(state, savedState);
