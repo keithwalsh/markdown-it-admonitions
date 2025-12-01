@@ -99,6 +99,19 @@ const defaultIcons: Readonly<Record<string, string>> = {
 } as const;
 
 /**
+ * Default Lucide icon mappings for admonition types
+ * These correspond to icon names from react-icons/lu
+ * @see https://react-icons.github.io/react-icons/icons/lu/
+ */
+const defaultLucideIcons: Readonly<Record<string, string>> = {
+  note: "LuStickyNote",
+  tip: "LuLightbulb",
+  warning: "LuTriangleAlert",
+  danger: "LuCircleAlert",
+  info: "LuInfo",
+} as const;
+
+/**
  * Type guard to check if a value is a non-empty string
  */
 const isNonEmptyString = (value: unknown): value is string => {
@@ -152,6 +165,25 @@ const validateIcons = (icons: unknown): void => {
       throw new TypeError("options.icons must map string keys to string values");
     }
   }
+};
+
+/**
+ * Validates lucideIcons option
+ * @throws {TypeError} if lucideIcons option is invalid
+ */
+const validateLucideIcons = (lucideIcons: unknown): void => {
+  if (typeof lucideIcons === "boolean") {
+    return;
+  }
+  if (isPlainObject(lucideIcons)) {
+    for (const [key, value] of Object.entries(lucideIcons)) {
+      if (!isNonEmptyString(key) || typeof value !== "string") {
+        throw new TypeError("options.lucideIcons must be a boolean or an object mapping string keys to string values");
+      }
+    }
+    return;
+  }
+  throw new TypeError("options.lucideIcons must be a boolean or an object");
 };
 
 /**
@@ -221,6 +253,10 @@ const validatePluginOptions = (options: AdmonitionPluginOptions): void => {
 
   if (options.icons !== undefined) {
     validateIcons(options.icons);
+  }
+
+  if (options.lucideIcons !== undefined) {
+    validateLucideIcons(options.lucideIcons);
   }
 
   if (options.obsidianStyle !== undefined && !isBoolean(options.obsidianStyle)) {
@@ -441,16 +477,26 @@ interface RenderPair {
 }
 
 /**
+ * Icon render configuration
+ */
+interface IconRenderConfig {
+  /** The icon content (emoji or Lucide icon name) */
+  icon?: string;
+  /** Whether this is a Lucide icon (renders as data attribute) */
+  isLucide: boolean;
+}
+
+/**
  * Create symmetric render pair for an admonition type
  * Ensures that open and close renders are properly matched
  * @param name - The admonition type name
- * @param icon - Optional icon to display
+ * @param iconConfig - Icon configuration including content and type
  * @param renderTitle - Whether to render the title section (must be symmetric)
  * @returns A matched pair of open and close render functions
  */
 const createDefaultRenderPair = (
   name: string,
-  icon?: string,
+  iconConfig: IconRenderConfig = { isLucide: false },
   renderTitle: boolean = true,
 ): RenderPair => {
   // Open render function
@@ -477,8 +523,15 @@ const createDefaultRenderPair = (
 
     if (renderTitle) {
       result += '<div class="admonition-title">';
-      if (icon) {
-        result += `<span class="admonition-icon">${icon}</span>`;
+      if (iconConfig.icon) {
+        if (iconConfig.isLucide) {
+          // Render Lucide icon placeholder with data attribute
+          // Users can hydrate this with react-icons or Lucide library
+          result += `<span class="admonition-icon admonition-icon-lucide" data-lucide-icon="${escapeHtml(iconConfig.icon)}"></span>`;
+        } else {
+          // Render emoji icon directly
+          result += `<span class="admonition-icon">${iconConfig.icon}</span>`;
+        }
       }
       result += escapeHtml(title);
       result += "</div>\n";
@@ -509,17 +562,29 @@ const createDefaultRenderPair = (
 };
 
 /**
+ * Configuration for icon rendering in register function
+ */
+interface IconRenderOptions {
+  /** Merged emoji icon mapping */
+  emojiIcons: Readonly<Record<string, string>>;
+  /** Merged Lucide icon mapping */
+  lucideIcons: Readonly<Record<string, string>>;
+  /** Whether to use Lucide icons */
+  useLucide: boolean;
+}
+
+/**
  * Helper function to register symmetric render rules for an admonition type
  * Ensures that open and close render functions are always properly paired
  * @param md - The markdown-it instance
  * @param type - The admonition type name
- * @param mergedIcons - Icon mapping for admonition types
+ * @param iconOptions - Icon rendering options
  * @param customRenders - Custom render functions (must provide both open and close together)
  */
 const registerRenderRules = (
   md: MarkdownIt,
   type: string,
-  mergedIcons: Readonly<Record<string, string>>,
+  iconOptions: IconRenderOptions,
   customRenders: Readonly<Record<string, CustomRenderPair>>,
 ): void => {
   // Skip if already registered
@@ -536,8 +601,13 @@ const registerRenderRules = (
     md.renderer.rules[`admonition_${type}_open`] = customRenderPair.open;
     md.renderer.rules[`admonition_${type}_close`] = customRenderPair.close;
   } else {
+    // Build icon config based on whether Lucide icons are enabled
+    const iconConfig: IconRenderConfig = iconOptions.useLucide
+      ? { icon: iconOptions.lucideIcons[type], isLucide: true }
+      : { icon: iconOptions.emojiIcons[type], isLucide: false };
+    
     // Create default symmetric render pair
-    const defaultPair = createDefaultRenderPair(type, mergedIcons[type], true);
+    const defaultPair = createDefaultRenderPair(type, iconConfig, true);
     md.renderer.rules[`admonition_${type}_open`] = defaultPair.open;
     md.renderer.rules[`admonition_${type}_close`] = defaultPair.close;
   }
@@ -783,6 +853,7 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
   const {
     types = defaultTypes,
     icons = defaultIcons,
+    lucideIcons = false,
     marker = ":",
     customRenders = {},
     obsidianStyle = true,
@@ -794,7 +865,20 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
 
   // Create type-safe copies
   const typesArray: readonly string[] = Array.isArray(types) ? types : defaultTypes;
-  const mergedIcons: Readonly<Record<string, string>> = { ...defaultIcons, ...icons };
+  const mergedEmojiIcons: Readonly<Record<string, string>> = { ...defaultIcons, ...icons };
+  
+  // Determine if Lucide icons are enabled and merge custom mappings
+  const useLucideIcons = lucideIcons === true || isPlainObject(lucideIcons);
+  const mergedLucideIcons: Readonly<Record<string, string>> = isPlainObject(lucideIcons)
+    ? { ...defaultLucideIcons, ...lucideIcons }
+    : defaultLucideIcons;
+
+  // Build icon options for render rules
+  const iconOptions: IconRenderOptions = {
+    emojiIcons: mergedEmojiIcons,
+    lucideIcons: mergedLucideIcons,
+    useLucide: useLucideIcons,
+  };
 
   // Register Docusaurus-style syntax for each admonition type
   if (docusaurusStyle) {
@@ -815,7 +899,7 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
       });
 
       // Set up render rules (if not already set by Obsidian style)
-      registerRenderRules(md, type, mergedIcons, customRenders);
+      registerRenderRules(md, type, iconOptions, customRenders);
     }
   }
 
@@ -828,7 +912,7 @@ export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
 
     // Set up render rules for each type (shared with container style)
     for (const type of typesArray) {
-      registerRenderRules(md, type, mergedIcons, customRenders);
+      registerRenderRules(md, type, iconOptions, customRenders);
     }
   }
 };

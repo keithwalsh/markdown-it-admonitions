@@ -65,11 +65,15 @@ md.use(admonitionPlugin, {
   // Custom types to register
   types: ['note', 'tip', 'warning', 'danger', 'info', 'custom'],
   
-  // Custom icons for types
+  // Custom emoji icons for types (used when lucideIcons is false)
   icons: {
     custom: '✨',
     note: '📌'
   },
+  
+  // Use Lucide icons instead of emojis (default: false)
+  // See "Lucide Icons" section below for details
+  lucideIcons: false,
   
   // Custom marker for Docusaurus style (default is ":")
   marker: ':',
@@ -93,6 +97,85 @@ md.use(admonitionPlugin, {
     }
   }
 });
+```
+
+### Lucide Icons
+
+The plugin supports [Lucide icons](https://lucide.dev/) via [react-icons](https://react-icons.github.io/react-icons/icons/lu/). When enabled, the plugin renders icon placeholders with `data-lucide-icon` attributes that you can hydrate with your preferred icon library.
+
+**Installation:**
+
+```bash
+npm install react-icons
+```
+
+**Enable Lucide icons:**
+
+```javascript
+// Use default Lucide icon mappings
+md.use(admonitionPlugin, {
+  lucideIcons: true
+});
+
+// Or provide custom icon name mappings
+md.use(admonitionPlugin, {
+  lucideIcons: {
+    note: 'LuPencil',      // Override default
+    tip: 'LuZap',          // Override default
+    custom: 'LuSparkles'   // Add new type
+  }
+});
+```
+
+**Default Lucide icon mappings:**
+
+| Type | Icon Name | Icon |
+|------|-----------|------|
+| note | `LuStickyNote` | 📄 |
+| tip | `LuLightbulb` | 💡 |
+| warning | `LuTriangleAlert` | ⚠️ |
+| danger | `LuCircleAlert` | 🚨 |
+| info | `LuInfo` | ℹ️ |
+
+**React example (hydrating icons):**
+
+```jsx
+import { useEffect } from 'react';
+import * as LucideIcons from 'react-icons/lu';
+import { createRoot } from 'react-dom/client';
+
+function hydrateAdmonitionIcons() {
+  const iconElements = document.querySelectorAll('[data-lucide-icon]');
+  
+  iconElements.forEach((el) => {
+    const iconName = el.getAttribute('data-lucide-icon');
+    const IconComponent = LucideIcons[iconName];
+    
+    if (IconComponent) {
+      const root = createRoot(el);
+      root.render(<IconComponent />);
+    }
+  });
+}
+
+// Call after rendering markdown
+useEffect(() => {
+  hydrateAdmonitionIcons();
+}, [markdownContent]);
+```
+
+**HTML output with Lucide icons enabled:**
+
+```html
+<div class="admonition admonition-note">
+  <div class="admonition-title">
+    <span class="admonition-icon admonition-icon-lucide" data-lucide-icon="LuStickyNote"></span>
+    Note
+  </div>
+  <div class="admonition-content">
+    Content here
+  </div>
+</div>
 ```
 
 ### Symmetry Principles

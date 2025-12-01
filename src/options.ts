@@ -121,9 +121,33 @@ export interface AdmonitionPluginOptions {
   /**
    * Icon mapping for each admonition type
    * Icons are displayed in the title area of the admonition
+   * Used when lucideIcons is false (default behavior)
    * @example { note: '📝', warning: '⚠️', custom: '✨' }
    */
   icons?: Readonly<Record<string, string>>;
+
+  /**
+   * Enable Lucide icons instead of emoji icons
+   * When enabled, renders icon placeholders compatible with Lucide icons
+   * 
+   * Users must install react-icons: `npm install react-icons`
+   * Import from: `import { IconName } from "react-icons/lu"`
+   * @see https://react-icons.github.io/react-icons/icons/lu/
+   * 
+   * When true, uses default Lucide icon mappings:
+   * - note: "LuStickyNote"
+   * - tip: "LuLightbulb"
+   * - warning: "LuTriangleAlert"
+   * - danger: "LuCircleAlert"
+   * - info: "LuInfo"
+   * 
+   * When an object, provide custom icon name mappings per type
+   * 
+   * @default false
+   * @example true // Use default Lucide icons
+   * @example { note: 'LuPencil', tip: 'LuZap' } // Custom mappings
+   */
+  lucideIcons?: boolean | Readonly<Record<string, string>>;
 
   /**
    * Marker character(s) to use for Docusaurus-style syntax

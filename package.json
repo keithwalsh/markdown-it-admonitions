@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-admonitions",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A markdown-it plugin for rendering admonitions",
   "type": "module",
   "keywords": [
@@ -52,6 +52,7 @@
     "@types/markdown-it": "^14.1.2",
     "csso-cli": "^4.0.2",
     "markdown-it": "^14.1.0",
+    "react-icons": "^5.5.0",
     "serve": "^14.2.5",
     "typescript": "^5.6.3",
     "vite": "^6.0.1",

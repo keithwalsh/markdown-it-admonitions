@@ -164,6 +164,56 @@
       border: 1px solid rgba(188, 140, 255, 0.3);
     }
     
+    .syntax-badge.lucide {
+      background: rgba(255, 140, 105, 0.15);
+      color: #ff8c69;
+      border: 1px solid rgba(255, 140, 105, 0.3);
+    }
+    
+    .section-description {
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+    }
+    
+    .section-description code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      background: var(--bg-tertiary);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      color: var(--accent-blue);
+    }
+    
+    .example-description {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    
+    .example-description code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      background: var(--bg-tertiary);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      color: var(--accent-purple);
+    }
+    
+    /* Lucide icon styling */
+    .admonition-icon-lucide {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: inherit;
+    }
+    
+    .admonition-icon-lucide svg {
+      width: 1.1em;
+      height: 1.1em;
+      stroke-width: 2;
+    }
+    
     /* Grid layout */
     .admonitions-grid {
       display: grid;
@@ -313,6 +363,23 @@
       <div class="admonitions-grid" id="obsidian-grid"></div>
     </section>
     
+    <!-- Lucide Icons Section -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Lucide Icons Mode</h2>
+        <span class="syntax-badge lucide">lucideIcons: true</span>
+      </div>
+      <p class="section-description">When <code>lucideIcons</code> is enabled, icons render as placeholders with <code>data-lucide-icon</code> attributes. You can hydrate these with react-icons or the Lucide library.</p>
+      
+      <div class="admonitions-grid" id="lucide-grid"></div>
+      
+      <div class="complex-example" style="margin-top: 1.5rem;">
+        <h3>Custom Lucide Icon Mapping</h3>
+        <p class="example-description">Using custom icon names: <code>{ note: 'LuPencil', tip: 'LuZap' }</code></p>
+        <div id="lucide-custom-example"></div>
+      </div>
+    </section>
+    
     <!-- Complex Examples -->
     <section class="section full-width-section">
       <div class="section-header">
@@ -353,9 +420,65 @@
   <script type="module">
     import MarkdownIt from 'https://esm.sh/markdown-it@14';
     import admonitionPlugin from '../dist/index.js';
+    import * as lucide from 'https://esm.sh/lucide@0.460.0';
     
+    // Map react-icons names (LuIconName) to lucide names (icon-name)
+    const reactIconToLucide = {
+      'LuStickyNote': 'sticky-note',
+      'LuLightbulb': 'lightbulb',
+      'LuTriangleAlert': 'triangle-alert',
+      'LuCircleAlert': 'circle-alert',
+      'LuInfo': 'info',
+      'LuPencil': 'pencil',
+      'LuZap': 'zap',
+      'LuAlertTriangle': 'alert-triangle',
+      'LuFlame': 'flame',
+      'LuHelpCircle': 'help-circle'
+    };
+    
+    // Function to hydrate Lucide icon placeholders
+    function hydrateLucideIcons() {
+      const iconElements = document.querySelectorAll('[data-lucide-icon]');
+      
+      iconElements.forEach((el) => {
+        const reactIconName = el.getAttribute('data-lucide-icon');
+        const lucideIconName = reactIconToLucide[reactIconName] || reactIconName.replace(/^Lu/, '').replace(/([A-Z])/g, '-$1').toLowerCase().slice(1);
+        
+        // Create the icon using lucide
+        const iconNode = lucide.createElement(lucide.icons[toPascalCase(lucideIconName)]);
+        if (iconNode) {
+          iconNode.style.width = '1em';
+          iconNode.style.height = '1em';
+          el.innerHTML = '';
+          el.appendChild(iconNode);
+        }
+      });
+    }
+    
+    // Convert kebab-case to PascalCase for lucide icon lookup
+    function toPascalCase(str) {
+      return str.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+    }
+    
+    // Standard markdown-it instance with emoji icons (default)
     const md = new MarkdownIt();
     md.use(admonitionPlugin);
+    
+    // Markdown-it instance with Lucide icons enabled
+    const mdLucide = new MarkdownIt();
+    mdLucide.use(admonitionPlugin, { lucideIcons: true });
+    
+    // Markdown-it instance with custom Lucide icon mappings
+    const mdLucideCustom = new MarkdownIt();
+    mdLucideCustom.use(admonitionPlugin, { 
+      lucideIcons: { 
+        note: 'LuPencil', 
+        tip: 'LuZap',
+        warning: 'LuAlertTriangle',
+        danger: 'LuFlame',
+        info: 'LuHelpCircle'
+      } 
+    });
     
     const types = [
       { name: 'note', description: 'General notes and information' },
@@ -400,6 +523,46 @@
       `;
       obsidianGrid.appendChild(card);
     });
+    
+    // Generate Lucide icons examples
+    const lucideGrid = document.getElementById('lucide-grid');
+    const lucideIconMap = {
+      note: 'LuStickyNote',
+      tip: 'LuLightbulb',
+      info: 'LuInfo',
+      warning: 'LuTriangleAlert',
+      danger: 'LuCircleAlert'
+    };
+    
+    types.forEach(type => {
+      const markdown = `::: ${type.name}\n${type.description}\n:::`;
+      
+      const card = document.createElement('div');
+      card.className = 'admonition-card';
+      card.innerHTML = `
+        <div class="card-source">
+          <pre>lucideIcons: true\nIcon: ${lucideIconMap[type.name]}\n\n::: ${type.name}\n${type.description}\n:::</pre>
+        </div>
+        <div class="card-output">
+          ${mdLucide.render(markdown)}
+        </div>
+      `;
+      lucideGrid.appendChild(card);
+    });
+    
+    // Custom Lucide mapping example
+    document.getElementById('lucide-custom-example').innerHTML = mdLucideCustom.render(
+`::: note
+This note uses the custom **LuPencil** icon instead of the default LuStickyNote.
+:::
+
+::: tip
+This tip uses the custom **LuZap** icon instead of the default LuLightbulb.
+:::`
+    );
+    
+    // Hydrate all Lucide icon placeholders with actual SVG icons
+    hydrateLucideIcons();
     
     // Custom title example
     document.getElementById('custom-title-example').innerHTML = md.render(
