@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admonitions Visual Test</title>
+  <link rel="stylesheet" href="../admonitions.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;600;700&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent-blue: #58a6ff;
+      --accent-purple: #bc8cff;
+      --border-subtle: #30363d;
+    }
+    
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    
+    body.light {
+      --bg-primary: #f8f9fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f0f1f2;
+      --text-primary: #1f2328;
+      --text-secondary: #656d76;
+      --border-subtle: #d0d7de;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 3rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(ellipse at 20% 50%, rgba(88, 166, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 50%, rgba(188, 140, 255, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+    
+    .header p {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      font-weight: 300;
+    }
+    
+    /* Theme toggle */
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      display: flex;
+      gap: 0.5rem;
+      background: var(--bg-tertiary);
+      padding: 0.5rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+    }
+    
+    .theme-toggle button {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+    
+    .theme-toggle button:hover {
+      color: var(--text-primary);
+    }
+    
+    .theme-toggle button.active {
+      background: var(--accent-blue);
+      color: white;
+    }
+    
+    /* Main content */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    /* Sections */
+    .section {
+      margin-bottom: 3rem;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    
+    .section-header h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .syntax-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .syntax-badge.docusaurus {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent-blue);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+    }
+    
+    .syntax-badge.obsidian {
+      background: rgba(188, 140, 255, 0.15);
+      color: var(--accent-purple);
+      border: 1px solid rgba(188, 140, 255, 0.3);
+    }
+    
+    /* Grid layout */
+    .admonitions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .admonition-card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .admonition-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    
+    .card-source {
+      padding: 1rem;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    
+    .card-source pre {
+      margin: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    
+    .card-output {
+      padding: 1rem;
+    }
+    
+    /* Admonition overrides for test page */
+    .admonition {
+      margin: 0;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body.light .admonition {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Full width section */
+    .full-width-section .admonitions-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .complex-example {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid var(--border-subtle);
+    }
+    
+    .complex-example h3 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 3rem;
+    }
+    
+    .footer a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Code styling */
+    .admonition-content pre {
+      background: rgba(0,0,0,0.2);
+      padding: 0.75rem;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+    
+    .admonition-content code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      background: rgba(0,0,0,0.15);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+    }
+    
+    .admonition-content pre code {
+      background: none;
+      padding: 0;
+    }
+
+    body.light .admonition-content pre {
+      background: rgba(0,0,0,0.04);
+    }
+    
+    body.light .admonition-content code {
+      background: rgba(0,0,0,0.06);
+    }
+  </style>
+</head>
+<body>
+  <div class="theme-toggle">
+    <button id="btn-dark" class="active">🌙 Dark</button>
+    <button id="btn-light">☀️ Light</button>
+  </div>
+  
+  <header class="header">
+    <h1>📦 markdown-it-admonitions</h1>
+    <p>Visual Test Page for All Admonition Types</p>
+  </header>
+  
+  <main class="container">
+    <!-- Docusaurus Style Section -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Docusaurus-Style Syntax</h2>
+        <span class="syntax-badge docusaurus">::: type</span>
+      </div>
+      
+      <div class="admonitions-grid" id="docusaurus-grid"></div>
+    </section>
+    
+    <!-- Obsidian Style Section -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Obsidian-Style Syntax</h2>
+        <span class="syntax-badge obsidian">&gt; [!type]</span>
+      </div>
+      
+      <div class="admonitions-grid" id="obsidian-grid"></div>
+    </section>
+    
+    <!-- Complex Examples -->
+    <section class="section full-width-section">
+      <div class="section-header">
+        <h2>Rich Content Examples</h2>
+      </div>
+      
+      <div class="admonitions-grid">
+        <div class="complex-example">
+          <h3>With Custom Title</h3>
+          <div id="custom-title-example"></div>
+        </div>
+        
+        <div class="complex-example">
+          <h3>With Code Block</h3>
+          <div id="code-example"></div>
+        </div>
+        
+        <div class="complex-example">
+          <h3>With List Items</h3>
+          <div id="list-example"></div>
+        </div>
+        
+        <div class="complex-example">
+          <h3>Nested Content</h3>
+          <div id="nested-example"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <footer class="footer">
+    <p>
+      <strong>markdown-it-admonitions</strong> · 
+      <a href="https://github.com/keithwalsh/markdown-it-admonitions" target="_blank">GitHub</a>
+    </p>
+  </footer>
+  
+  <script type="module">
+    import MarkdownIt from 'https://esm.sh/markdown-it@14';
+    import admonitionPlugin from '../dist/index.js';
+    
+    const md = new MarkdownIt();
+    md.use(admonitionPlugin);
+    
+    const types = [
+      { name: 'note', description: 'General notes and information' },
+      { name: 'tip', description: 'Helpful tips and suggestions' },
+      { name: 'info', description: 'Informational callouts' },
+      { name: 'warning', description: 'Important warnings to consider' },
+      { name: 'danger', description: 'Critical danger alerts' }
+    ];
+    
+    // Generate Docusaurus-style examples
+    const docusaurusGrid = document.getElementById('docusaurus-grid');
+    types.forEach(type => {
+      const markdown = `::: ${type.name}\n${type.description}\n:::`;
+      
+      const card = document.createElement('div');
+      card.className = 'admonition-card';
+      card.innerHTML = `
+        <div class="card-source">
+          <pre>::: ${type.name}\n${type.description}\n:::</pre>
+        </div>
+        <div class="card-output">
+          ${md.render(markdown)}
+        </div>
+      `;
+      docusaurusGrid.appendChild(card);
+    });
+    
+    // Generate Obsidian-style examples
+    const obsidianGrid = document.getElementById('obsidian-grid');
+    types.forEach(type => {
+      const markdown = `> [!${type.name}]\n> ${type.description}`;
+      
+      const card = document.createElement('div');
+      card.className = 'admonition-card';
+      card.innerHTML = `
+        <div class="card-source">
+          <pre>&gt; [!${type.name}]\n&gt; ${type.description}</pre>
+        </div>
+        <div class="card-output">
+          ${md.render(markdown)}
+        </div>
+      `;
+      obsidianGrid.appendChild(card);
+    });
+    
+    // Custom title example
+    document.getElementById('custom-title-example').innerHTML = md.render(
+`::: warning Heads Up!
+This is a warning with a custom title instead of the default "Warning" heading.
+:::`
+    );
+    
+    // Code example
+    document.getElementById('code-example').innerHTML = md.render(
+`::: tip Pro Tip
+You can use inline \`code\` or code blocks:
+
+\`\`\`javascript
+const greeting = "Hello, World!";
+console.log(greeting);
+\`\`\`
+:::`
+    );
+    
+    // List example
+    document.getElementById('list-example').innerHTML = md.render(
+`::: info Prerequisites
+Before you begin, make sure you have:
+- Node.js 18 or higher
+- npm or yarn installed
+- A code editor
+:::`
+    );
+    
+    // Nested content example
+    document.getElementById('nested-example').innerHTML = md.render(
+`::: danger Security Alert
+**Do not** share your API keys!
+
+Keep them safe in:
+1. Environment variables
+2. Secret managers
+3. Encrypted config files
+:::`
+    );
+    
+    // Theme toggle
+    const btnDark = document.getElementById('btn-dark');
+    const btnLight = document.getElementById('btn-light');
+    
+    btnDark.addEventListener('click', () => {
+      document.body.classList.remove('light');
+      btnDark.classList.add('active');
+      btnLight.classList.remove('active');
+    });
+    
+    btnLight.addEventListener('click', () => {
+      document.body.classList.add('light');
+      btnLight.classList.add('active');
+      btnDark.classList.remove('active');
+    });
+    
+    console.log('✅ Admonitions test page loaded successfully');
+  </script>
+</body>
+</html>

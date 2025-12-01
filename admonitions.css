@@ -76,7 +76,6 @@
 .admonition-note {
   border-left-color: rgb(2, 122, 255);
   background-color: rgba(2, 122, 255, 0.1);
-  
 }
 
 .admonition-note .admonition-title {
@@ -86,56 +85,47 @@
 /* Tip admonition - Green theme */
 .admonition-tip {
   border-left-color: #00c853;
+  background-color: rgba(0, 200, 83, 0.1);
 }
 
 .admonition-tip .admonition-title {
-  background-color: rgba(0, 200, 83, 0.1);
-  border-bottom-color: rgba(0, 200, 83, 0.2);
   color: #00a344;
 }
 
 /* Info admonition - Cyan theme */
 .admonition-info {
   border-left-color: #00b8d4;
+  background-color: rgba(0, 184, 212, 0.1);
 }
 
 .admonition-info .admonition-title {
-  background-color: rgba(0, 184, 212, 0.1);
-  border-bottom-color: rgba(0, 184, 212, 0.2);
   color: #0097a7;
 }
 
 /* Warning admonition - Orange theme */
 .admonition-warning {
   border-left-color: #ff9100;
+  background-color: rgba(255, 145, 0, 0.1);
 }
 
 .admonition-warning .admonition-title {
-  background-color: rgba(255, 145, 0, 0.1);
-  border-bottom-color: rgba(255, 145, 0, 0.2);
   color: #e65100;
 }
 
 /* Danger admonition - Red theme */
 .admonition-danger {
   border-left-color: #ff1744;
+  background-color: rgba(255, 23, 68, 0.1);
 }
 
 .admonition-danger .admonition-title {
-  background-color: rgba(255, 23, 68, 0.1);
-  border-bottom-color: rgba(255, 23, 68, 0.2);
   color: #c41c00;
 }
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .admonition {
-    background-color: #1e1e1e;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .admonition-title {
-    color: #e0e0e0;
   }
 
   .admonition-content {
@@ -143,37 +133,47 @@
   }
 
   /* Note - dark mode */
-  .admonition-note .admonition-title {
+  .admonition-note {
     background-color: rgba(68, 138, 255, 0.15);
-    border-bottom-color: rgba(68, 138, 255, 0.3);
+  }
+
+  .admonition-note .admonition-title {
     color: #82b1ff;
   }
 
   /* Tip - dark mode */
-  .admonition-tip .admonition-title {
+  .admonition-tip {
     background-color: rgba(0, 200, 83, 0.15);
-    border-bottom-color: rgba(0, 200, 83, 0.3);
+  }
+
+  .admonition-tip .admonition-title {
     color: #69f0ae;
   }
 
   /* Info - dark mode */
-  .admonition-info .admonition-title {
+  .admonition-info {
     background-color: rgba(0, 184, 212, 0.15);
-    border-bottom-color: rgba(0, 184, 212, 0.3);
+  }
+
+  .admonition-info .admonition-title {
     color: #18ffff;
   }
 
   /* Warning - dark mode */
-  .admonition-warning .admonition-title {
+  .admonition-warning {
     background-color: rgba(255, 145, 0, 0.15);
-    border-bottom-color: rgba(255, 145, 0, 0.3);
+  }
+
+  .admonition-warning .admonition-title {
     color: #ffab40;
   }
 
   /* Danger - dark mode */
-  .admonition-danger .admonition-title {
+  .admonition-danger {
     background-color: rgba(255, 23, 68, 0.15);
-    border-bottom-color: rgba(255, 23, 68, 0.3);
+  }
+
+  .admonition-danger .admonition-title {
     color: #ff5252;
   }
 }
