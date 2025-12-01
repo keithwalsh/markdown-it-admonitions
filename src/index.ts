@@ -269,39 +269,6 @@ const escapeHtml = (text: string): string => {
 };
 
 /**
- * Interface for token creation parameters
- */
-interface TokenCreationParams {
-  state: StateBlock;
-  name: string;
-  markup: string;
-  info: string;
-  startLine: number;
-  endLine: number;
-}
-
-/**
- * Creates symmetric opening and closing tokens for an admonition block
- * Ensures proper nesting levels (+1 for open, -1 for close)
- * @returns Object containing the created open and close tokens
- */
-const createAdmonitionTokens = (params: TokenCreationParams): { open: Token; close: Token } => {
-  const { state, name, markup, info, startLine, endLine } = params;
-  
-  const openToken = state.push(`admonition_${name}_open`, "div", 1);
-  openToken.markup = markup;
-  openToken.block = true;
-  openToken.info = info;
-  openToken.map = [startLine, endLine];
-  
-  const closeToken = state.push(`admonition_${name}_close`, "div", -1);
-  closeToken.markup = markup;
-  closeToken.block = true;
-  
-  return { open: openToken, close: closeToken };
-};
-
-/**
  * Interface for closing fence search result
  */
 interface ClosingFenceResult {
@@ -441,16 +408,20 @@ const createAdmonitionContainer = (
     state.lineMax = closingFence.nextLine;
     state.blkIndent = currentLineIndent ?? 0;
 
-    createAdmonitionTokens({
-      state,
-      name,
-      markup,
-      info: params,
-      startLine,
-      endLine: closingFence.nextLine,
-    });
+    // Push OPEN token first
+    const openToken = state.push(`admonition_${name}_open`, "div", 1);
+    openToken.markup = markup;
+    openToken.block = true;
+    openToken.info = params;
+    openToken.map = [startLine, closingFence.nextLine];
 
+    // Tokenize content BETWEEN open and close tokens
     state.md.block.tokenize(state, startLine + 1, closingFence.nextLine);
+
+    // Push CLOSE token after content
+    const closeToken = state.push(`admonition_${name}_close`, "div", -1);
+    closeToken.markup = markup;
+    closeToken.block = true;
 
     restoreState(state, savedState);
     state.line = closingFence.nextLine + (closingFence.found ? 1 : 0);

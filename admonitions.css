@@ -20,7 +20,7 @@
 /* Title section */
 .admonition-title {
   margin: 0;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 1rem 0.4rem 1rem;
   font-weight: 700;
   font-size: 1em;
   display: flex;
@@ -38,7 +38,7 @@
 
 /* Content section */
 .admonition-content {
-  padding: 1rem;
+  padding: 0.5rem 1rem 1rem 1rem;
 }
 
 /* Remove extra spacing from first/last children in content */
@@ -199,11 +199,11 @@
   }
 
   .admonition-title {
-    padding: 0.625rem 0.875rem;
+    padding: 0.5rem 0.875rem 0.35rem 0.875rem;
   }
 
   .admonition-content {
-    padding: 0.875rem;
+    padding: 0.4rem 0.875rem 0.875rem 0.875rem;
   }
 }
 
