@@ -10,7 +10,7 @@
   margin: 1.5625em 0;
   padding: 0;
   overflow: hidden;
-  border-left: 4px solid;
+  border-left: 7px solid;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   font-size: 0.9em;
@@ -20,12 +20,12 @@
 /* Title section */
 .admonition-title {
   margin: 0;
-  padding: 0.6rem 1rem 0.4rem 1rem;
+  padding: 0.6rem 1rem 0.3rem 1rem;
   font-weight: 700;
   font-size: 1em;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 /* Icon styling */
