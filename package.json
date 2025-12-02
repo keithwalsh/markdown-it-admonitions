@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-admonitions",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A markdown-it plugin for rendering admonitions",
   "type": "module",
   "keywords": [
