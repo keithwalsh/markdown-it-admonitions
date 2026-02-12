@@ -57,6 +57,7 @@ Both styles can be enabled or disabled independently via options.
 - `warning` ⚠️
 - `danger` 🚨
 - `info` ℹ️
+- `success` ✅
 
 ## Options
 
@@ -136,6 +137,7 @@ md.use(admonitionPlugin, {
 | warning | `LuTriangleAlert` | ⚠️ |
 | danger | `LuCircleAlert` | 🚨 |
 | info | `LuInfo` | ℹ️ |
+| success | `LuCircleCheck` | ✅ |
 
 **React example (hydrating icons):**
 
@@ -241,6 +243,7 @@ The default stylesheet includes:
   - **Info**: Cyan theme
   - **Warning**: Orange theme
   - **Danger**: Red theme
+  - **Success**: Green theme
 - Automatic dark mode support via `prefers-color-scheme`
 - Responsive design for mobile devices
 - Print-friendly styles

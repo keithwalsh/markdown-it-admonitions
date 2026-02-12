@@ -129,6 +129,16 @@
   color: #c41c00;
 }
 
+/* Success admonition - Green theme */
+.admonition-success {
+  border-left-color: #4caf50;
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.admonition-success .admonition-title {
+  color: #2e7d32;
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .admonition {
@@ -182,6 +192,15 @@
 
   .admonition-danger .admonition-title {
     color: #ff5252;
+  }
+
+  /* Success - dark mode */
+  .admonition-success {
+    background-color: rgba(76, 175, 80, 0.15);
+  }
+
+  .admonition-success .admonition-title {
+    color: #81c784;
   }
 }
 
