@@ -532,8 +532,10 @@ interface RenderPair {
  * Icon render configuration
  */
 interface IconRenderConfig {
-  /** The icon content (emoji or Lucide icon name) */
+  /** The icon content (emoji or react-icons/lu icon name) */
   icon?: string;
+  /** Lucide's kebab-case icon name, used by Lucide's createIcons() */
+  lucideName?: string;
   /** Whether this is a Lucide icon (renders as data attribute) */
   isLucide: boolean;
 }
@@ -577,9 +579,10 @@ const createDefaultRenderPair = (
       result += '<div class="admonition-title">';
       if (iconConfig.icon) {
         if (iconConfig.isLucide) {
-          // Render Lucide icon placeholder with data attribute
-          // Users can hydrate this with react-icons or Lucide library
-          result += `<span class="admonition-icon admonition-icon-lucide" data-lucide-icon="${escapeHtml(iconConfig.icon)}"></span>`;
+          // Render Lucide icon placeholder with data attributes
+          // data-lucide-icon holds the react-icons/lu name, data-lucide the Lucide name
+          const lucideAttr = iconConfig.lucideName ? ` data-lucide="${escapeHtml(iconConfig.lucideName)}"` : "";
+          result += `<span class="admonition-icon admonition-icon-lucide" data-lucide-icon="${escapeHtml(iconConfig.icon)}"${lucideAttr}></span>`;
         } else {
           // Render emoji icon directly
           result += `<span class="admonition-icon">${iconConfig.icon}</span>`;
@@ -656,7 +659,11 @@ const registerRenderRules = (
     // Build icon config based on whether Lucide icons are enabled
     const lucideIcon = iconOptions.lucideIcons[type];
     const iconConfig: IconRenderConfig = iconOptions.useLucide
-      ? { icon: lucideIcon ? toReactIconName(lucideIcon) : undefined, isLucide: true }
+      ? {
+          icon: lucideIcon ? toReactIconName(lucideIcon) : undefined,
+          lucideName: lucideIcon ? toLucideIconName(lucideIcon) : undefined,
+          isLucide: true,
+        }
       : { icon: iconOptions.emojiIcons[type], isLucide: false };
     
     // Create default symmetric render pair
