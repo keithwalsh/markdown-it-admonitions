@@ -58,6 +58,7 @@ Both styles can be enabled or disabled independently via options.
 - `danger` 🚨
 - `info` ℹ️
 - `success` ✅
+- `question` ❓
 
 ## Options
 
@@ -145,6 +146,7 @@ Whichever convention you use, every placeholder carries the icon name in both fo
 | danger | `LuCircleAlert` | `circle-alert` | 🚨 |
 | info | `LuInfo` | `info` | ℹ️ |
 | success | `LuCircleCheck` | `circle-check` | ✅ |
+| question | `LuCircleHelp` | `circle-help` | ❓ |
 
 **HTML output with Lucide icons enabled:**
 
@@ -270,6 +272,7 @@ The default stylesheet includes:
   - **Warning**: Orange theme
   - **Danger**: Red theme
   - **Success**: Green theme
+  - **Question**: Purple theme
 - Automatic dark mode support via `prefers-color-scheme`
 - Responsive design for mobile devices
 - Print-friendly styles
