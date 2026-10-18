@@ -113,7 +113,7 @@ export interface AdmonitionPluginOptions {
   /**
    * Array of admonition types to register
    * Each type must be a non-empty string
-   * @default ['note', 'tip', 'warning', 'danger', 'info', 'success']
+   * @default ['note', 'tip', 'warning', 'danger', 'info', 'success', 'question']
    * @example ['note', 'warning', 'custom']
    */
   types?: readonly string[];
@@ -141,6 +141,7 @@ export interface AdmonitionPluginOptions {
    * - danger: "LuCircleAlert"
    * - info: "LuInfo"
    * - success: "LuCircleCheck"
+   * - question: "LuCircleHelp"
    * 
    * When an object, provide custom icon name mappings per type.
    * Names can use either convention:

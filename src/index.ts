@@ -16,7 +16,7 @@ import type {
 
 const MIN_MARKER_NUM = 3;
 
-const defaultTypes: readonly string[] = ["note", "tip", "warning", "danger", "info", "success"] as const;
+const defaultTypes: readonly string[] = ["note", "tip", "warning", "danger", "info", "success", "question"] as const;
 
 /**
  * Helper functions for safe state property access
@@ -97,6 +97,7 @@ const defaultIcons: Readonly<Record<string, string>> = {
   danger: "🚨",
   info: "ℹ️",
   success: "✅",
+  question: "❓",
 } as const;
 
 /**
@@ -111,6 +112,7 @@ const defaultLucideIcons: Readonly<Record<string, string>> = {
   danger: "LuCircleAlert",
   info: "LuInfo",
   success: "LuCircleCheck",
+  question: "LuCircleHelp",
 } as const;
 
 /**
