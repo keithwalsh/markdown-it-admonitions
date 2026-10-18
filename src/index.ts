@@ -114,6 +114,56 @@ const defaultLucideIcons: Readonly<Record<string, string>> = {
 } as const;
 
 /**
+ * Convert a PascalCase icon name to Lucide's kebab-case name
+ * Digits stay attached to a following lone capital, so "Axis3D" becomes "axis-3d"
+ * and "Grid2X2" becomes "grid-2x2", while "Link2Off" becomes "link-2-off"
+ */
+const pascalToKebabCase = (name: string): string =>
+  name
+    .replace(/([^0-9])(?=[A-Z])/g, "$1-")
+    .replace(/([0-9])(?=[A-Z][a-z])/g, "$1-")
+    .toLowerCase()
+    .replace(/([0-9]?)([a-z])(?=[0-9])/g, (match, digit: string, letter: string) =>
+      digit ? match : `${letter}-`,
+    );
+
+/**
+ * Convert a Lucide kebab-case icon name to the PascalCase used by react-icons/lu
+ * Letters after digits are capitalised, so "grid-2x2" becomes "Grid2X2"
+ */
+const kebabToReactPascalCase = (name: string): string =>
+  name
+    .split(/[-_\s]+/)
+    .filter((part) => part.length > 0)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("")
+    .replace(/([0-9])([a-z])/g, (_match, digit: string, letter: string) => digit + letter.toUpperCase());
+
+/**
+ * Convert an icon name in any supported convention to Lucide's kebab-case name
+ * Supported conventions:
+ * - react-icons/lu: "LuCircleAlert"
+ * - Lucide: "circle-alert"
+ * - lucide-react: "CircleAlert", "CircleAlertIcon" or "LucideCircleAlert"
+ * @example toLucideIconName("LuCircleAlert") // "circle-alert"
+ */
+const toLucideIconName = (name: string): string => {
+  if (/^Lu[A-Z0-9]/.test(name)) {
+    return pascalToKebabCase(name.slice(2));
+  }
+  if (/^[A-Z]/.test(name)) {
+    return pascalToKebabCase(name.replace(/^Lucide(?=[A-Z0-9])/, "").replace(/(.)Icon$/, "$1"));
+  }
+  return name;
+};
+
+/**
+ * Convert an icon name in any supported convention to its react-icons/lu name
+ * @example toReactIconName("circle-alert") // "LuCircleAlert"
+ */
+const toReactIconName = (name: string): string => `Lu${kebabToReactPascalCase(toLucideIconName(name))}`;
+
+/**
  * Type guard to check if a value is a non-empty string
  */
 const isNonEmptyString = (value: unknown): value is string => {
@@ -482,8 +532,10 @@ interface RenderPair {
  * Icon render configuration
  */
 interface IconRenderConfig {
-  /** The icon content (emoji or Lucide icon name) */
+  /** The icon content (emoji or react-icons/lu icon name) */
   icon?: string;
+  /** Lucide's kebab-case icon name, used by Lucide's createIcons() */
+  lucideName?: string;
   /** Whether this is a Lucide icon (renders as data attribute) */
   isLucide: boolean;
 }
@@ -527,9 +579,10 @@ const createDefaultRenderPair = (
       result += '<div class="admonition-title">';
       if (iconConfig.icon) {
         if (iconConfig.isLucide) {
-          // Render Lucide icon placeholder with data attribute
-          // Users can hydrate this with react-icons or Lucide library
-          result += `<span class="admonition-icon admonition-icon-lucide" data-lucide-icon="${escapeHtml(iconConfig.icon)}"></span>`;
+          // Render Lucide icon placeholder with data attributes
+          // data-lucide-icon holds the react-icons/lu name, data-lucide the Lucide name
+          const lucideAttr = iconConfig.lucideName ? ` data-lucide="${escapeHtml(iconConfig.lucideName)}"` : "";
+          result += `<span class="admonition-icon admonition-icon-lucide" data-lucide-icon="${escapeHtml(iconConfig.icon)}"${lucideAttr}></span>`;
         } else {
           // Render emoji icon directly
           result += `<span class="admonition-icon">${iconConfig.icon}</span>`;
@@ -604,8 +657,13 @@ const registerRenderRules = (
     md.renderer.rules[`admonition_${type}_close`] = customRenderPair.close;
   } else {
     // Build icon config based on whether Lucide icons are enabled
+    const lucideIcon = iconOptions.lucideIcons[type];
     const iconConfig: IconRenderConfig = iconOptions.useLucide
-      ? { icon: iconOptions.lucideIcons[type], isLucide: true }
+      ? {
+          icon: lucideIcon ? toReactIconName(lucideIcon) : undefined,
+          lucideName: lucideIcon ? toLucideIconName(lucideIcon) : undefined,
+          isLucide: true,
+        }
       : { icon: iconOptions.emojiIcons[type], isLucide: false };
     
     // Create default symmetric render pair

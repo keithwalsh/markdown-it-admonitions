@@ -102,13 +102,7 @@ md.use(admonitionPlugin, {
 
 ### Lucide Icons
 
-The plugin supports [Lucide icons](https://lucide.dev/) via [react-icons](https://react-icons.github.io/react-icons/icons/lu/). When enabled, the plugin renders icon placeholders with `data-lucide-icon` attributes that you can hydrate with your preferred icon library.
-
-**Installation:**
-
-```bash
-npm install react-icons
-```
+The plugin supports [Lucide icons](https://lucide.dev/), either through [react-icons](https://react-icons.github.io/react-icons/icons/lu/) or through Lucide's own libraries (`lucide`, `lucide-react`). When enabled, the plugin renders icon placeholders that you hydrate with whichever library you use.
 
 **Enable Lucide icons:**
 
@@ -121,25 +115,69 @@ md.use(admonitionPlugin, {
 // Or provide custom icon name mappings
 md.use(admonitionPlugin, {
   lucideIcons: {
-    note: 'LuPencil',      // Override default
-    tip: 'LuZap',          // Override default
-    custom: 'LuSparkles'   // Add new type
+    note: 'LuPencil',      // react-icons/lu name
+    tip: 'zap',            // Lucide name
+    custom: 'Sparkles'     // lucide-react component name
   }
 });
 ```
 
+**Icon name conventions:** custom mappings accept either naming convention, and you can mix them:
+
+| Convention | Example |
+|------------|---------|
+| react-icons/lu | `LuCircleAlert` |
+| Lucide (kebab-case) | `circle-alert` |
+| lucide-react component | `CircleAlert`, `CircleAlertIcon`, `LucideCircleAlert` |
+
+Whichever convention you use, every placeholder carries the icon name in both forms:
+
+- `data-lucide-icon`: the react-icons/lu name (e.g. `LuCircleAlert`)
+- `data-lucide`: the Lucide name (e.g. `circle-alert`)
+
 **Default Lucide icon mappings:**
 
-| Type | Icon Name | Icon |
-|------|-----------|------|
-| note | `LuStickyNote` | 📄 |
-| tip | `LuLightbulb` | 💡 |
-| warning | `LuTriangleAlert` | ⚠️ |
-| danger | `LuCircleAlert` | 🚨 |
-| info | `LuInfo` | ℹ️ |
-| success | `LuCircleCheck` | ✅ |
+| Type | react-icons/lu | Lucide | Icon |
+|------|----------------|--------|------|
+| note | `LuStickyNote` | `sticky-note` | 📄 |
+| tip | `LuLightbulb` | `lightbulb` | 💡 |
+| warning | `LuTriangleAlert` | `triangle-alert` | ⚠️ |
+| danger | `LuCircleAlert` | `circle-alert` | 🚨 |
+| info | `LuInfo` | `info` | ℹ️ |
+| success | `LuCircleCheck` | `circle-check` | ✅ |
 
-**React example (hydrating icons):**
+**HTML output with Lucide icons enabled:**
+
+```html
+<div class="admonition admonition-note">
+  <div class="admonition-title">
+    <span class="admonition-icon admonition-icon-lucide" data-lucide-icon="LuStickyNote" data-lucide="sticky-note"></span>
+    Note
+  </div>
+  <div class="admonition-content">
+    Content here
+  </div>
+</div>
+```
+
+**Hydrating with Lucide (`lucide`):**
+
+```bash
+npm install lucide
+```
+
+```javascript
+import { createIcons, icons } from 'lucide';
+
+// Call after rendering markdown; replaces every [data-lucide] placeholder with an SVG
+createIcons({ icons });
+```
+
+**Hydrating with react-icons:**
+
+```bash
+npm install react-icons
+```
 
 ```jsx
 import { useEffect } from 'react';
@@ -166,19 +204,7 @@ useEffect(() => {
 }, [markdownContent]);
 ```
 
-**HTML output with Lucide icons enabled:**
-
-```html
-<div class="admonition admonition-note">
-  <div class="admonition-title">
-    <span class="admonition-icon admonition-icon-lucide" data-lucide-icon="LuStickyNote"></span>
-    Note
-  </div>
-  <div class="admonition-content">
-    Content here
-  </div>
-</div>
-```
+With `lucide-react`, read the `data-lucide` name instead and render it with `DynamicIcon` from `lucide-react/dynamic` (`<DynamicIcon name={el.dataset.lucide} />`).
 
 ### Symmetry Principles
 

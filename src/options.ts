@@ -142,11 +142,15 @@ export interface AdmonitionPluginOptions {
    * - info: "LuInfo"
    * - success: "LuCircleCheck"
    * 
-   * When an object, provide custom icon name mappings per type
+   * When an object, provide custom icon name mappings per type.
+   * Names can use either convention:
+   * - react-icons/lu: "LuPencil", "LuCircleAlert"
+   * - Lucide: "pencil", "circle-alert" (or lucide-react's "CircleAlert")
    * 
    * @default false
    * @example true // Use default Lucide icons
-   * @example { note: 'LuPencil', tip: 'LuZap' } // Custom mappings
+   * @example { note: 'LuPencil', tip: 'LuZap' } // react-icons names
+   * @example { note: 'pencil', tip: 'zap' } // Lucide names
    */
   lucideIcons?: boolean | Readonly<Record<string, string>>;
 
