@@ -38,7 +38,10 @@
 }
 
 /* Lucide icon sizing (SVG icons) */
-.admonition-icon-lucide svg {
+/* Covers SVGs rendered inside the placeholder (e.g. react-icons) and
+   placeholders replaced by an SVG (e.g. Lucide's createIcons) */
+.admonition-icon-lucide svg,
+svg.admonition-icon-lucide {
   width: 1.25em;
   height: 1.25em;
 }
