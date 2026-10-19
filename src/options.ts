@@ -1,6 +1,11 @@
-import type { Options } from "markdown-it";
-import type Renderer from "markdown-it/lib/renderer.mjs";
-import type Token from "markdown-it/lib/token.mjs";
+import type MarkdownIt from "markdown-it";
+
+/**
+ * A markdown-it instance
+ * Derived from the default export so it resolves against the typings of
+ * markdown-it 13 and 14 (@types/markdown-it) and markdown-it 15 (bundled)
+ */
+export type MarkdownItInstance = InstanceType<typeof MarkdownIt>;
 
 /**
  * Environment object passed to render functions
@@ -12,20 +17,10 @@ export interface RenderEnvironment {
 
 /**
  * Custom render function type for admonition tags
- * @param tokens - Array of tokens being rendered
- * @param index - Index of the current token
- * @param options - Markdown-it options
- * @param env - Environment object for custom data
- * @param slf - The renderer instance
- * @returns HTML string
+ * Same signature as a markdown-it renderer rule:
+ * (tokens, index, options, env, slf) => HTML string
  */
-export type RenderFunction = (
-  tokens: Token[],
-  index: number,
-  options: Options,
-  env: RenderEnvironment,
-  slf: Renderer,
-) => string;
+export type RenderFunction = NonNullable<MarkdownItInstance["renderer"]["rules"][string]>;
 
 /**
  * Validation function type for admonition containers
