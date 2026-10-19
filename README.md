@@ -8,6 +8,8 @@ A markdown-it plugin for rendering admonitions (callouts/alerts).
 npm install markdown-it-admonitions
 ```
 
+Works with markdown-it 13, 14 and 15.
+
 ## Usage
 
 ```javascript
