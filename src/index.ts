@@ -1,5 +1,5 @@
 import type MarkdownIt from "markdown-it";
-import type { Options, PluginWithOptions } from "markdown-it";
+import type { Options } from "markdown-it";
 import type { RuleBlock } from "markdown-it/lib/parser_block.mjs";
 import type StateBlock from "markdown-it/lib/rules_block/state_block.mjs";
 import type Renderer from "markdown-it/lib/renderer.mjs";
@@ -8,6 +8,7 @@ import type Token from "markdown-it/lib/token.mjs";
 import type {
   AdmonitionPluginOptions,
   MarkdownItAdmonitionOptions,
+  MarkdownItInstance,
   RenderFunction,
   RenderEnvironment,
   ValidateFunction,
@@ -905,8 +906,8 @@ const createObsidianCalloutRule = (
  * });
  * ```
  */
-export const admonitionPlugin: PluginWithOptions<AdmonitionPluginOptions> = (
-  md: MarkdownIt,
+export const admonitionPlugin = (
+  md: MarkdownItInstance,
   options: AdmonitionPluginOptions = {},
 ): void => {
   // Validate options for symmetry and correctness
@@ -985,6 +986,7 @@ export default admonitionPlugin;
 export type { 
   AdmonitionPluginOptions, 
   MarkdownItAdmonitionOptions, 
+  MarkdownItInstance,
   RenderFunction,
   RenderEnvironment,
   ValidateFunction,
