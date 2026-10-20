@@ -52,6 +52,8 @@ Content goes here
 
 Both styles can be enabled or disabled independently via options.
 
+Titles can contain inline Markdown, such as `**bold**`, `` `code` `` or links.
+
 ## Default Types
 
 - `note` 📝
