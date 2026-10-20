@@ -143,6 +143,25 @@ describe("obsidian syntax", () => {
     );
   });
 
+  it("renders Obsidian aliases as their type, titled with the alias", () => {
+    expect(render("> [!hint]\n> Body")).toBe(
+      admonition("tip", "Hint", "<p>Body</p>\n", emoji("💡")),
+    );
+    expect(render("> [!FAQ] Questions\n> Body")).toBe(
+      admonition("question", "Questions", "<p>Body</p>\n", emoji("❓")),
+    );
+    expect(render("> [!error]\n> Body")).toContain('class="admonition admonition-danger"');
+    expect(render("> [!check]\n> Body")).toContain('class="admonition admonition-success"');
+  });
+
+  it("prefers a registered type over an alias with the same name", () => {
+    expect(render("> [!hint]\n> Body", { types: ["tip", "hint"] })).toContain('class="admonition admonition-hint"');
+  });
+
+  it("ignores an alias whose type is not registered", () => {
+    expect(render("> [!hint]\n> Body", { types: ["note"] })).toContain("<blockquote>");
+  });
+
   it("renders a collapsed foldable callout with -", () => {
     expect(render("> [!note]- Folded\n> Body")).toBe(
       '<details class="admonition admonition-note">\n' +
