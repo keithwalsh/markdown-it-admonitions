@@ -137,6 +137,8 @@ md.use(admonitionPlugin, {
 });
 ```
 
+Using the plugin again on the same instance replaces the earlier options.
+
 ### Lucide Icons
 
 The plugin supports [Lucide icons](https://lucide.dev/), either through [react-icons](https://react-icons.github.io/react-icons/icons/lu/) or through Lucide's own libraries (`lucide`, `lucide-react`). When enabled, the plugin renders icon placeholders that you hydrate with whichever library you use.
