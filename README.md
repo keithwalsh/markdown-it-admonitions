@@ -122,7 +122,7 @@ md.use(admonitionPlugin, {
   docusaurusStyle: true,  // Enable ::: type syntax (default: true)
   
   // Custom render functions per type
-  // IMPORTANT: Both 'open' and 'close' must be provided together for symmetric rendering
+  // Provide both 'open' and 'close'
   customRenders: {
     custom: {
       open: (tokens, idx, options, env, slf) => {
@@ -248,30 +248,12 @@ useEffect(() => {
 
 With `lucide-react`, read the `data-lucide` name instead and render it with `DynamicIcon` from `lucide-react/dynamic` (`<DynamicIcon name={el.dataset.lucide} />`).
 
-### Symmetry Principles
+### Option validation
 
-This plugin enforces symmetry principles to ensure proper HTML structure and consistent behaviour:
+Invalid options throw a `TypeError` when the plugin is used. Two rules go beyond plain type checks:
 
-- **Render Function Pairs**: Custom render functions must provide both `open` and `close` together. Providing only one will result in a validation error.
-- **Syntax Styles**: At least one of `obsidianStyle` or `docusaurusStyle` must be enabled. Both are enabled by default.
-- **Token Structure**: Every opening token has a corresponding closing token with balanced nesting levels.
-
-```javascript
-// ✅ Correct: Both open and close provided
-customRenders: {
-  note: {
-    open: (tokens, idx, options, env, slf) => '<div class="custom">',
-    close: (tokens, idx, options, env, slf) => '</div>'
-  }
-}
-
-// ❌ Invalid: Only open provided (will throw TypeError)
-customRenders: {
-  note: {
-    open: (tokens, idx, options, env, slf) => '<div class="custom">'
-  }
-}
-```
+- Custom renders must provide `open` and `close` together, since one without the other would leave unbalanced HTML.
+- `obsidianStyle` and `docusaurusStyle` can't both be `false`.
 
 ## Styling
 

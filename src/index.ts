@@ -195,184 +195,60 @@ const toLucideIconName = (name: string): string => {
  */
 const toReactIconName = (name: string): string => `Lu${kebabToReactPascalCase(toLucideIconName(name))}`;
 
-/**
- * Type guard to check if a value is a non-empty string
- */
-const isNonEmptyString = (value: unknown): value is string => {
-  return typeof value === "string" && value.length > 0;
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.length > 0;
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isStringMap = (value: unknown): boolean =>
+  isPlainObject(value) && Object.values(value).every((item) => typeof item === "string");
+
+const fail = (message: string): never => {
+  throw new TypeError(message);
 };
 
 /**
- * Type guard to check if a value is a valid array of strings
+ * Check option types at runtime, for callers without type checking
+ * @throws {TypeError} if an option is invalid
  */
-const isStringArray = (value: unknown): value is string[] => {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-};
+const validateOptions = (options: AdmonitionPluginOptions): void => {
+  const { types, marker, icons, lucideIcons, obsidianStyle, docusaurusStyle, customRenders } = options;
 
-/**
- * Type guard to check if a value is a boolean
- */
-const isBoolean = (value: unknown): value is boolean => {
-  return typeof value === "boolean";
-};
-
-/**
- * Type guard to check if a value is a valid object (not null, not array)
- */
-const isPlainObject = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-};
-
-/**
- * Validates that types array contains only non-empty strings
- * @throws {TypeError} if types are invalid
- */
-const validateTypes = (types: unknown): void => {
-  if (!isStringArray(types)) {
-    throw new TypeError("options.types must be an array of strings");
+  if (types !== undefined && !(Array.isArray(types) && types.length > 0 && types.every(isNonEmptyString))) {
+    fail("options.types must be a non-empty array of non-empty strings");
   }
-  if (types.some((type) => !isNonEmptyString(type))) {
-    throw new TypeError("All type names must be non-empty strings");
+  if (marker !== undefined && !isNonEmptyString(marker)) {
+    fail("options.marker must be a non-empty string");
   }
-};
+  if (icons !== undefined && !isStringMap(icons)) {
+    fail("options.icons must map type names to strings");
+  }
+  if (lucideIcons !== undefined && typeof lucideIcons !== "boolean" && !isStringMap(lucideIcons)) {
+    fail("options.lucideIcons must be a boolean or map type names to icon names");
+  }
+  if (obsidianStyle !== undefined && typeof obsidianStyle !== "boolean") {
+    fail("options.obsidianStyle must be a boolean");
+  }
+  if (docusaurusStyle !== undefined && typeof docusaurusStyle !== "boolean") {
+    fail("options.docusaurusStyle must be a boolean");
+  }
+  if (obsidianStyle === false && docusaurusStyle === false) {
+    fail("options.obsidianStyle and options.docusaurusStyle cannot both be false");
+  }
+  if (customRenders !== undefined) {
+    if (!isPlainObject(customRenders)) fail("options.customRenders must be an object");
 
-/**
- * Validates icon mapping object
- * @throws {TypeError} if icons object is invalid
- */
-const validateIcons = (icons: unknown): void => {
-  if (!isPlainObject(icons)) {
-    throw new TypeError("options.icons must be an object");
-  }
-  for (const [key, value] of Object.entries(icons)) {
-    if (!isNonEmptyString(key) || typeof value !== "string") {
-      throw new TypeError("options.icons must map string keys to string values");
-    }
-  }
-};
-
-/**
- * Validates lucideIcons option
- * @throws {TypeError} if lucideIcons option is invalid
- */
-const validateLucideIcons = (lucideIcons: unknown): void => {
-  if (typeof lucideIcons === "boolean") {
-    return;
-  }
-  if (isPlainObject(lucideIcons)) {
-    for (const [key, value] of Object.entries(lucideIcons)) {
-      if (!isNonEmptyString(key) || typeof value !== "string") {
-        throw new TypeError("options.lucideIcons must be a boolean or an object mapping string keys to string values");
+    // A custom open renderer without its close (or the reverse) would leave
+    // unbalanced HTML, so both must be given together
+    for (const [type, pair] of Object.entries(customRenders)) {
+      if (!isPlainObject(pair) || (pair.open === undefined) !== (pair.close === undefined)) {
+        fail(`customRenders.${type} must provide both open and close`);
+      }
+      if (pair.open !== undefined && (typeof pair.open !== "function" || typeof pair.close !== "function")) {
+        fail(`customRenders.${type}.open and .close must be functions`);
       }
     }
-    return;
-  }
-  throw new TypeError("options.lucideIcons must be a boolean or an object");
-};
-
-/**
- * Validates custom render pair for symmetry
- * Ensures both open and close functions are provided together
- * @throws {TypeError} if render pair is asymmetric or invalid
- */
-const validateRenderPair = (key: string, pair: CustomRenderPair): void => {
-  if (!isNonEmptyString(key)) {
-    throw new TypeError("customRenders keys must be non-empty strings");
-  }
-  
-  const hasOpen = pair.open !== undefined;
-  const hasClose = pair.close !== undefined;
-  
-  // Enforce symmetric render pair: both open and close must be provided together
-  if (hasOpen && !hasClose) {
-    throw new TypeError(
-      `customRenders.${key} has 'open' but missing 'close'. ` +
-      `Both must be provided together for symmetric rendering to ensure proper HTML structure.`
-    );
-  }
-  
-  if (hasClose && !hasOpen) {
-    throw new TypeError(
-      `customRenders.${key} has 'close' but missing 'open'. ` +
-      `Both must be provided together for symmetric rendering to ensure proper HTML structure.`
-    );
-  }
-  
-  // Type validation for render functions
-  if (hasOpen && typeof pair.open !== "function") {
-    throw new TypeError(`customRenders.${key}.open must be a function`);
-  }
-  if (hasClose && typeof pair.close !== "function") {
-    throw new TypeError(`customRenders.${key}.close must be a function`);
-  }
-};
-
-/**
- * Validates custom renders object
- * @throws {TypeError} if customRenders object or any render pair is invalid
- */
-const validateCustomRenders = (customRenders: unknown): void => {
-  if (!isPlainObject(customRenders)) {
-    throw new TypeError("options.customRenders must be an object");
-  }
-  
-  for (const [key, value] of Object.entries(customRenders)) {
-    validateRenderPair(key, value as CustomRenderPair);
-  }
-};
-
-/**
- * Validates plugin options at runtime with emphasis on symmetric operations
- * 
- * @throws {TypeError} if options violate symmetry principles or are invalid
- */
-const validatePluginOptions = (options: AdmonitionPluginOptions): void => {
-  if (options.types !== undefined) {
-    validateTypes(options.types);
-  }
-
-  if (options.marker !== undefined && !isNonEmptyString(options.marker)) {
-    throw new TypeError("options.marker must be a non-empty string");
-  }
-
-  if (options.icons !== undefined) {
-    validateIcons(options.icons);
-  }
-
-  if (options.lucideIcons !== undefined) {
-    validateLucideIcons(options.lucideIcons);
-  }
-
-  if (options.obsidianStyle !== undefined && !isBoolean(options.obsidianStyle)) {
-    throw new TypeError("options.obsidianStyle must be a boolean");
-  }
-
-  if (options.docusaurusStyle !== undefined && !isBoolean(options.docusaurusStyle)) {
-    throw new TypeError("options.docusaurusStyle must be a boolean");
-  }
-
-  if (options.customRenders !== undefined) {
-    validateCustomRenders(options.customRenders);
-  }
-};
-
-/**
- * Validates that complementary configuration options maintain symmetry
- * Ensures at least one syntax style is enabled to prevent incomplete plugin setup
- * 
- * @param obsidianStyle - Whether Obsidian-style syntax is enabled
- * @param docusaurusStyle - Whether Docusaurus-style syntax is enabled
- * @throws {TypeError} if no syntax styles are enabled (incomplete configuration)
- */
-const validateComplementaryOptions = (
-  obsidianStyle: boolean,
-  docusaurusStyle: boolean,
-): void => {
-  if (!obsidianStyle && !docusaurusStyle) {
-    throw new TypeError(
-      "At least one of options.obsidianStyle or options.docusaurusStyle must be enabled. " +
-      "Disabling both syntax styles prevents the plugin from functioning."
-    );
   }
 };
 
@@ -455,16 +331,11 @@ const findClosingFence = (
  * @param types - Array of valid admonition type names
  * @param marker - Marker character(s) for the fence
  * @returns A RuleBlock function that parses the admonition syntax
- * @throws {TypeError} if the marker is invalid
  */
 const createAdmonitionContainer = (
   types: readonly string[],
   marker: string,
 ): RuleBlock => {
-  if (!isNonEmptyString(marker)) {
-    throw new TypeError("Container marker must be a non-empty string");
-  }
-
   const markerStart = marker[0]!; // Safe: marker is validated to be non-empty
   const markerLength = marker.length;
 
@@ -548,7 +419,7 @@ const createAdmonitionContainer = (
 };
 
 /**
- * Symmetric render pair interface to ensure open/close renders match
+ * Open and close renderers for one admonition type
  */
 interface RenderPair {
   open: RenderFunction;
@@ -568,19 +439,15 @@ interface IconRenderConfig {
 }
 
 /**
- * Create symmetric render pair for an admonition type
- * Ensures that open and close renders are properly matched
+ * Create the default open and close renderers for an admonition type
  * @param md - The markdown-it instance, used to render inline markdown in titles
  * @param name - The admonition type name
  * @param iconConfig - Icon configuration including content and type
- * @param renderTitle - Whether to render the title section (must be symmetric)
- * @returns A matched pair of open and close render functions
  */
 const createDefaultRenderPair = (
   md: MarkdownIt,
   name: string,
-  iconConfig: IconRenderConfig = { isLucide: false },
-  renderTitle: boolean = true,
+  iconConfig: IconRenderConfig,
 ): RenderPair => {
   // Open render function
   const open: RenderFunction = (
@@ -614,44 +481,34 @@ const createDefaultRenderPair = (
 
     let result = slf.renderToken(tokens, index, _options);
 
-    if (renderTitle) {
-      result += `<${titleTag} class="admonition-title">`;
-      if (iconConfig.icon) {
-        if (iconConfig.isLucide) {
-          // Render Lucide icon placeholder with data attributes
-          // data-lucide-icon holds the react-icons/lu name, data-lucide the Lucide name
-          const lucideAttr = iconConfig.lucideName ? ` data-lucide="${escapeHtml(iconConfig.lucideName)}"` : "";
-          result += `<span class="admonition-icon admonition-icon-lucide" aria-hidden="true" data-lucide-icon="${escapeHtml(iconConfig.icon)}"${lucideAttr}></span>`;
-        } else {
-          // Render emoji icon directly
-          result += `<span class="admonition-icon" aria-hidden="true">${iconConfig.icon}</span>`;
-        }
+    result += `<${titleTag} class="admonition-title">`;
+    if (iconConfig.icon) {
+      if (iconConfig.isLucide) {
+        // Render Lucide icon placeholder with data attributes
+        // data-lucide-icon holds the react-icons/lu name, data-lucide the Lucide name
+        const lucideAttr = iconConfig.lucideName ? ` data-lucide="${escapeHtml(iconConfig.lucideName)}"` : "";
+        result += `<span class="admonition-icon admonition-icon-lucide" aria-hidden="true" data-lucide-icon="${escapeHtml(iconConfig.icon)}"${lucideAttr}></span>`;
+      } else {
+        // Render emoji icon directly
+        result += `<span class="admonition-icon" aria-hidden="true">${iconConfig.icon}</span>`;
       }
-      result += `<span class="admonition-title-text">${md.renderInline(title, env)}</span>`;
-      result += `</${titleTag}>\n`;
-      result += '<div class="admonition-content">\n';
     }
+    result += `<span class="admonition-title-text">${md.renderInline(title, env)}</span>`;
+    result += `</${titleTag}>\n`;
+    result += '<div class="admonition-content">\n';
 
     return result;
   };
 
-  // Close render function (symmetric with open)
+  // Close render function: ends admonition-content, then the container
   const close: RenderFunction = (
     tokens: Token[],
     index: number,
     options: Options,
     _env: RenderEnvironment,
     slf: Renderer,
-  ): string => {
-    let result = "";
-    if (renderTitle) {
-      result += "</div>\n"; // close admonition-content (matches open)
-    }
-    result += slf.renderToken(tokens, index, options);
-    return result;
-  };
+  ): string => "</div>\n" + slf.renderToken(tokens, index, options);
 
-  // Return symmetric pair
   return { open, close };
 };
 
@@ -668,13 +525,12 @@ interface IconRenderOptions {
 }
 
 /**
- * Helper function to register symmetric render rules for an admonition type
- * Ensures that open and close render functions are always properly paired
+ * Register the open and close render rules for an admonition type
  * Replaces rules from an earlier md.use() call so its options take effect
  * @param md - The markdown-it instance
  * @param type - The admonition type name
  * @param iconOptions - Icon rendering options
- * @param customRenders - Custom render functions (must provide both open and close together)
+ * @param customRenders - Custom open and close renderers per type
  */
 const registerRenderRules = (
   md: MarkdownIt,
@@ -682,12 +538,10 @@ const registerRenderRules = (
   iconOptions: IconRenderOptions,
   customRenders: Readonly<Record<string, CustomRenderPair>>,
 ): void => {
-  // Get custom render pair (validated to have both open and close, or neither)
+  // Custom renders are validated to come as an open and close pair
   const customRenderPair = customRenders[type];
 
-  // Use symmetric render pair: either custom (both open and close) or default (both open and close)
   if (customRenderPair?.open && customRenderPair?.close) {
-    // Custom renders are validated to be provided as a symmetric pair
     md.renderer.rules[`admonition_${type}_open`] = customRenderPair.open;
     md.renderer.rules[`admonition_${type}_close`] = customRenderPair.close;
   } else {
@@ -701,8 +555,7 @@ const registerRenderRules = (
         }
       : { icon: iconOptions.emojiIcons[type], isLucide: false };
     
-    // Create default symmetric render pair
-    const defaultPair = createDefaultRenderPair(md, type, iconConfig, true);
+    const defaultPair = createDefaultRenderPair(md, type, iconConfig);
     md.renderer.rules[`admonition_${type}_open`] = defaultPair.open;
     md.renderer.rules[`admonition_${type}_close`] = defaultPair.close;
   }
@@ -747,19 +600,10 @@ const findBlockquoteClose = (tokens: Token[], openIndex: number): number => {
  * content (lists, code, nesting, lazy continuation and source maps)
  * @param types - Array of valid admonition type names
  * @returns A core rule that converts callout blockquotes into admonitions
- * @throws {TypeError} if types array is invalid
  */
 const createObsidianCalloutRule = (
   types: readonly string[],
 ): RuleCore => {
-  // Validate types array
-  if (!Array.isArray(types) || types.length === 0) {
-    throw new TypeError("Callout rule types parameter must be a non-empty array");
-  }
-  if (!types.every(isNonEmptyString)) {
-    throw new TypeError("Callout rule types parameter must contain only non-empty strings");
-  }
-
   const obsidianCallout: RuleCore = (state: StateCore): void => {
     const tokens = state.tokens;
 
@@ -869,8 +713,7 @@ export const admonitionPlugin = (
   md: MarkdownItInstance,
   options: AdmonitionPluginOptions = {},
 ): void => {
-  // Validate options for symmetry and correctness
-  validatePluginOptions(options);
+  validateOptions(options);
 
   const {
     types = defaultTypes,
@@ -882,11 +725,7 @@ export const admonitionPlugin = (
     docusaurusStyle = true,
   } = options;
 
-  // SYMMETRY VALIDATION: Ensure at least one complete syntax style is enabled
-  validateComplementaryOptions(obsidianStyle, docusaurusStyle);
-
-  // Create type-safe copies
-  const typesArray: readonly string[] = Array.isArray(types) ? types : defaultTypes;
+  const typesArray: readonly string[] = types;
   const mergedEmojiIcons: Readonly<Record<string, string>> = { ...defaultIcons, ...icons };
   
   // Determine if Lucide icons are enabled and merge custom mappings

@@ -357,5 +357,23 @@ describe("options", () => {
     expect(() => render("", { marker: "" })).toThrow(TypeError);
     expect(() => render("", { obsidianStyle: false, docusaurusStyle: false })).toThrow(TypeError);
     expect(() => render("", { customRenders: { note: { open: () => "" } } })).toThrow(TypeError);
+    expect(() => render("", { customRenders: { note: { close: () => "" } } })).toThrow(TypeError);
+    expect(() => render("", { types: [] })).toThrow(TypeError);
+    expect(() => render("", { types: ["note", ""] })).toThrow(TypeError);
+    expect(() => render("", { icons: { note: 1 } as unknown as Record<string, string> })).toThrow(TypeError);
+    expect(() => render("", { lucideIcons: "yes" as unknown as boolean })).toThrow(TypeError);
+    expect(() => render("", { obsidianStyle: "no" as unknown as boolean })).toThrow(TypeError);
+  });
+
+  it("accepts valid options", () => {
+    expect(() =>
+      render("", {
+        types: ["note"],
+        icons: { note: "✏️" },
+        lucideIcons: { note: "pencil" },
+        obsidianStyle: false,
+        customRenders: { note: { open: () => "", close: () => "" }, tip: {} },
+      }),
+    ).not.toThrow();
   });
 });

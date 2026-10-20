@@ -58,51 +58,28 @@ export interface MarkdownItAdmonitionOptions {
 }
 
 /**
- * Custom renderers for opening and closing tags of an admonition type
- * 
- * SYMMETRY REQUIREMENT: Both `open` and `close` must be provided together.
- * Providing only one will result in a validation error to ensure proper HTML structure.
- * 
+ * Custom renderers for the opening and closing tags of an admonition type
+ * Provide both or neither; giving only one throws a TypeError, since it
+ * would leave unbalanced HTML
+ *
  * @example
  * ```typescript
- * // ✅ Correct: Both open and close provided
  * {
  *   open: (tokens, idx, options, env, slf) => '<div class="custom">',
- *   close: (tokens, idx, options, env, slf) => '</div>'
- * }
- * 
- * // ❌ Invalid: Only open provided (will throw TypeError)
- * {
- *   open: (tokens, idx, options, env, slf) => '<div class="custom">'
- * }
- * 
- * // ❌ Invalid: Only close provided (will throw TypeError)
- * {
  *   close: (tokens, idx, options, env, slf) => '</div>'
  * }
  * ```
  */
 export interface CustomRenderPair {
-  /**
-   * Custom render function for the opening tag
-   * MUST be paired with `close` function for symmetric rendering
-   */
+  /** Renderer for the opening tag, paired with `close` */
   open?: RenderFunction;
-  
-  /**
-   * Custom render function for the closing tag
-   * MUST be paired with `open` function for symmetric rendering
-   */
+
+  /** Renderer for the closing tag, paired with `open` */
   close?: RenderFunction;
 }
 
 /**
  * Main plugin configuration options
- * 
- * SYMMETRY PRINCIPLES:
- * - At least one of `obsidianStyle` or `docusaurusStyle` must be true (default: both true)
- * - Custom render pairs must provide both `open` and `close` together
- * - All configuration follows complementary operation patterns for consistency
  */
 export interface AdmonitionPluginOptions {
   /**
@@ -163,16 +140,14 @@ export interface AdmonitionPluginOptions {
 
   /**
    * Enable Obsidian-style callout syntax (> [!type] Title)
-   * When enabled, allows using blockquote-based callout syntax
-   * SYMMETRY: At least one of obsidianStyle or docusaurusStyle must be enabled
+   * At least one of obsidianStyle and docusaurusStyle must be enabled
    * @default true
    */
   obsidianStyle?: boolean;
 
   /**
    * Enable Docusaurus-style syntax (::: type Title)
-   * When enabled, allows using container-based syntax
-   * SYMMETRY: At least one of obsidianStyle or docusaurusStyle must be enabled
+   * At least one of obsidianStyle and docusaurusStyle must be enabled
    * @default true
    */
   docusaurusStyle?: boolean;
@@ -180,7 +155,7 @@ export interface AdmonitionPluginOptions {
   /**
    * Custom render functions per admonition type
    * Allows complete control over HTML generation for each type
-   * SYMMETRY REQUIREMENT: Each type must provide BOTH open and close functions together
+   * Each type must provide both open and close
    * @example
    * ```typescript
    * {
