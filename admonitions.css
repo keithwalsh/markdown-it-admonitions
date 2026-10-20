@@ -7,16 +7,18 @@
 
 /* Base admonition container */
 .admonition {
-  /* Background and title colours derive from each type's --admonition-color */
+  /* Background and title colours derive from each type's --admonition-color;
+     custom types without one get a neutral grey */
+  --admonition-color: #6b7280;
   --admonition-bg: color-mix(in srgb, var(--admonition-color) 10%, transparent);
   --admonition-title-color: color-mix(in srgb, var(--admonition-color) 60%, black);
 
   margin: 1.5625em 0;
   padding: 0;
   overflow: hidden;
-  border-left: 7px solid var(--admonition-color, currentColor);
+  border-left: 7px solid var(--admonition-color);
   border-radius: 4px;
-  background-color: var(--admonition-bg, transparent);
+  background-color: var(--admonition-bg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   font-size: 0.9em;
   line-height: 1.6;
@@ -31,7 +33,7 @@
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  color: var(--admonition-title-color, inherit);
+  color: var(--admonition-title-color);
 }
 
 /* Icon styling */
