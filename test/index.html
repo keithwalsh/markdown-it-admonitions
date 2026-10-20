@@ -449,7 +449,9 @@
       { name: 'info', description: 'Informational callouts' },
       { name: 'warning', description: 'Important warnings to consider' },
       { name: 'danger', description: 'Critical danger alerts' },
-      { name: 'question', description: 'Questions worth considering' }
+      { name: 'question', description: 'Questions worth considering' },
+      { name: 'important', description: 'Key information readers need' },
+      { name: 'caution', description: 'Risky actions to avoid' }
     ];
     
     // Generate Docusaurus-style examples
@@ -496,7 +498,9 @@
       info: 'LuInfo',
       warning: 'LuTriangleAlert',
       danger: 'LuCircleAlert',
-      question: 'LuCircleHelp'
+      question: 'LuCircleHelp',
+      important: 'LuMessageSquareWarning',
+      caution: 'LuOctagonAlert'
     };
     
     types.forEach(type => {

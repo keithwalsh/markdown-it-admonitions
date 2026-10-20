@@ -42,6 +42,14 @@ Content goes here
 :::
 ```
 
+The Docusaurus v3 form, with the title in brackets, also works:
+
+```markdown
+:::note[Optional Title]
+Content goes here
+:::
+```
+
 ### Obsidian Style (default)
 
 ```markdown
@@ -50,7 +58,16 @@ Content goes here
 > More content
 ```
 
+Add `-` or `+` straight after the type to make the callout foldable. It renders as a `<details>` element, collapsed with `-` and expanded with `+`:
+
+```markdown
+> [!tip]- Click to expand
+> Hidden until opened
+```
+
 Both styles can be enabled or disabled independently via options.
+
+Titles can contain inline Markdown, such as `**bold**`, `` `code` `` or links.
 
 ## Default Types
 
@@ -61,6 +78,10 @@ Both styles can be enabled or disabled independently via options.
 - `info` ℹ️
 - `success` ✅
 - `question` ❓
+- `important` ❗
+- `caution` 🛑
+
+`important` and `caution`, together with `note`, `tip` and `warning`, cover GitHub's alert types, so `> [!IMPORTANT]` and `> [!CAUTION]` render as admonitions.
 
 ## Options
 
@@ -149,6 +170,8 @@ Whichever convention you use, every placeholder carries the icon name in both fo
 | info | `LuInfo` | `info` | ℹ️ |
 | success | `LuCircleCheck` | `circle-check` | ✅ |
 | question | `LuCircleHelp` | `circle-help` | ❓ |
+| important | `LuMessageSquareWarning` | `message-square-warning` | ❗ |
+| caution | `LuOctagonAlert` | `octagon-alert` | 🛑 |
 
 **HTML output with Lucide icons enabled:**
 
@@ -156,7 +179,7 @@ Whichever convention you use, every placeholder carries the icon name in both fo
 <div class="admonition admonition-note">
   <div class="admonition-title">
     <span class="admonition-icon admonition-icon-lucide" aria-hidden="true" data-lucide-icon="LuStickyNote" data-lucide="sticky-note"></span>
-    Note
+    <span class="admonition-title-text">Note</span>
   </div>
   <div class="admonition-content">
     Content here
@@ -275,6 +298,8 @@ The default stylesheet includes:
   - **Danger**: Red theme
   - **Success**: Green theme
   - **Question**: Purple theme
+  - **Important**: Pink theme
+  - **Caution**: Deep orange theme
 - Automatic dark mode support via `prefers-color-scheme`, with theme overrides (see [Dark mode](#dark-mode))
 - Colours driven by CSS custom properties, so a custom type needs one line of CSS
 - A neutral grey for custom types that don't set a colour

@@ -19,7 +19,29 @@ import type {
 
 const MIN_MARKER_NUM = 3;
 
-const defaultTypes: readonly string[] = ["note", "tip", "warning", "danger", "info", "success", "question"] as const;
+/**
+ * Matches the Docusaurus v3 title syntax after the marker: type[Title]
+ */
+const BRACKET_TITLE_PATTERN = /^\s*([^\s[]+)\[(.*)\]\s*$/;
+
+/**
+ * Read the admonition type from the text after the opening marker
+ * Accepts "type Title" and "type[Title]"
+ */
+const getContainerType = (params: string): string | undefined =>
+  /^[^\s[]+/.exec(params.trim())?.[0];
+
+const defaultTypes: readonly string[] = [
+  "note",
+  "tip",
+  "warning",
+  "danger",
+  "info",
+  "success",
+  "question",
+  "important",
+  "caution",
+] as const;
 
 /**
  * Helper functions for safe state property access
@@ -101,6 +123,8 @@ const defaultIcons: Readonly<Record<string, string>> = {
   info: "ℹ️",
   success: "✅",
   question: "❓",
+  important: "❗",
+  caution: "🛑",
 } as const;
 
 /**
@@ -116,6 +140,8 @@ const defaultLucideIcons: Readonly<Record<string, string>> = {
   info: "LuInfo",
   success: "LuCircleCheck",
   question: "LuCircleHelp",
+  important: "LuMessageSquareWarning",
+  caution: "LuOctagonAlert",
 } as const;
 
 /**
@@ -443,8 +469,7 @@ const createAdmonitionContainer = (
   const {
     name,
     marker = ":",
-    validate = (params: string): boolean =>
-      params.trim().split(" ", 2)[0] === name,
+    validate = (params: string): boolean => getContainerType(params) === name,
   } = options;
 
   const markerStart = marker[0]!; // Safe: marker is validated to be non-empty
@@ -505,7 +530,9 @@ const createAdmonitionContainer = (
     const openToken = state.push(`admonition_${name}_open`, "div", 1);
     openToken.markup = markup;
     openToken.block = true;
-    openToken.info = params;
+    // Normalise type[Title] to "type Title" so renderers read one format
+    const bracketTitle = BRACKET_TITLE_PATTERN.exec(params);
+    openToken.info = bracketTitle ? `${bracketTitle[1]} ${bracketTitle[2]}` : params;
     openToken.map = [startLine, closingFence.nextLine];
 
     // Tokenize content BETWEEN open and close tokens
@@ -548,12 +575,14 @@ interface IconRenderConfig {
 /**
  * Create symmetric render pair for an admonition type
  * Ensures that open and close renders are properly matched
+ * @param md - The markdown-it instance, used to render inline markdown in titles
  * @param name - The admonition type name
  * @param iconConfig - Icon configuration including content and type
  * @param renderTitle - Whether to render the title section (must be symmetric)
  * @returns A matched pair of open and close render functions
  */
 const createDefaultRenderPair = (
+  md: MarkdownIt,
   name: string,
   iconConfig: IconRenderConfig = { isLucide: false },
   renderTitle: boolean = true,
@@ -563,7 +592,7 @@ const createDefaultRenderPair = (
     tokens: Token[],
     index: number,
     _options: Options,
-    _env: RenderEnvironment,
+    env: RenderEnvironment,
     slf: Renderer,
   ): string => {
     const token = tokens[index];
@@ -578,10 +607,17 @@ const createDefaultRenderPair = (
     token.attrJoin("class", "admonition");
     token.attrJoin("class", `admonition-${name}`);
 
+    // Foldable callouts render as <details>, open when marked with "+"
+    const foldable = token.tag === "details";
+    if (foldable && token.meta?.fold === "+") {
+      token.attrSet("open", "");
+    }
+    const titleTag = foldable ? "summary" : "div";
+
     let result = slf.renderToken(tokens, index, _options);
 
     if (renderTitle) {
-      result += '<div class="admonition-title">';
+      result += `<${titleTag} class="admonition-title">`;
       if (iconConfig.icon) {
         if (iconConfig.isLucide) {
           // Render Lucide icon placeholder with data attributes
@@ -593,8 +629,8 @@ const createDefaultRenderPair = (
           result += `<span class="admonition-icon" aria-hidden="true">${iconConfig.icon}</span>`;
         }
       }
-      result += escapeHtml(title);
-      result += "</div>\n";
+      result += `<span class="admonition-title-text">${md.renderInline(title, env)}</span>`;
+      result += `</${titleTag}>\n`;
       result += '<div class="admonition-content">\n';
     }
 
@@ -672,16 +708,17 @@ const registerRenderRules = (
       : { icon: iconOptions.emojiIcons[type], isLucide: false };
     
     // Create default symmetric render pair
-    const defaultPair = createDefaultRenderPair(type, iconConfig, true);
+    const defaultPair = createDefaultRenderPair(md, type, iconConfig, true);
     md.renderer.rules[`admonition_${type}_open`] = defaultPair.open;
     md.renderer.rules[`admonition_${type}_close`] = defaultPair.close;
   }
 };
 
 /**
- * Matches the first line of an Obsidian callout: [!type] followed by an optional title
+ * Matches the first line of an Obsidian callout: [!type], an optional fold
+ * marker (- collapsed, + expanded) and an optional title
  */
-const CALLOUT_PATTERN = /^\[!([^\]\n]*)\]([^\n]*)(?:\n|$)/;
+const CALLOUT_PATTERN = /^\[!([^\]\n]*)\]([+-]?)([^\n]*)(?:\n|$)/;
 
 /**
  * Find the blockquote_close token matching the blockquote_open at the given index
@@ -744,15 +781,18 @@ const createObsidianCalloutRule = (
       const closeIndex = findBlockquoteClose(tokens, index);
       if (closeIndex === -1) continue;
 
-      const title = match[2]!.trim();
+      const fold = match[2]!;
+      const title = match[3]!.trim();
+      const tag = fold ? "details" : "div";
 
       openToken.type = `admonition_${calloutType}_open`;
-      openToken.tag = "div";
+      openToken.tag = tag;
       openToken.info = calloutType + (title ? " " + title : "");
+      if (fold) openToken.meta = { ...openToken.meta, fold };
 
       const closeToken = tokens[closeIndex]!;
       closeToken.type = `admonition_${calloutType}_close`;
-      closeToken.tag = "div";
+      closeToken.tag = tag;
 
       // Remove the [!type] line from the first paragraph, or the whole
       // paragraph when the line was all it held
@@ -836,10 +876,7 @@ export const admonitionPlugin = (
       const containerOptions: MarkdownItAdmonitionOptions = {
         name: type,
         marker,
-        validate: (params: string): boolean => {
-          const typeName = params.trim().split(" ", 2)[0];
-          return typeName === type;
-        },
+        validate: (params: string): boolean => getContainerType(params) === type,
       };
 
       const container = createAdmonitionContainer(containerOptions);

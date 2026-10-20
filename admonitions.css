@@ -54,6 +54,37 @@ svg.admonition-icon-lucide {
   height: 1.25em;
 }
 
+/* Foldable callouts ([!type]- and [!type]+) render as <details> */
+summary.admonition-title {
+  cursor: pointer;
+  list-style: none;
+}
+
+summary.admonition-title::-webkit-details-marker {
+  display: none;
+}
+
+/* Chevron: points right when collapsed, down when expanded */
+summary.admonition-title::after {
+  content: "";
+  flex: none;
+  width: 0.45em;
+  height: 0.45em;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.2s;
+}
+
+details[open] > summary.admonition-title::after {
+  transform: rotate(45deg);
+}
+
+details.admonition:not([open]) > summary.admonition-title {
+  padding-bottom: 0.6rem;
+}
+
 /* Content section */
 .admonition-content {
   padding: 0.5rem 1rem 1rem 1rem;
@@ -123,6 +154,16 @@ svg.admonition-icon-lucide {
 /* Question admonition - Purple theme */
 .admonition-question {
   --admonition-color: #7c4dff;
+}
+
+/* Important admonition - Pink theme */
+.admonition-important {
+  --admonition-color: #e91e63;
+}
+
+/* Caution admonition - Deep orange theme */
+.admonition-caution {
+  --admonition-color: #f4511e;
 }
 
 /* Dark mode support

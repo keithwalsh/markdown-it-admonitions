@@ -8,7 +8,7 @@ const render = (src: string, options?: AdmonitionPluginOptions): string =>
 
 const admonition = (type: string, title: string, content: string, icon = ""): string =>
   `<div class="admonition admonition-${type}">\n` +
-  `<div class="admonition-title">${icon}${title}</div>\n` +
+  `<div class="admonition-title">${icon}<span class="admonition-title-text">${title}</span></div>\n` +
   `<div class="admonition-content">\n${content}</div>\n` +
   `</div>\n`;
 
@@ -33,8 +33,18 @@ describe("docusaurus syntax", () => {
     );
   });
 
+  it("accepts the Docusaurus v3 [Title] syntax", () => {
+    expect(render(":::note[My **Title**]\nBody\n:::")).toBe(
+      admonition("note", "My <strong>Title</strong>", "<p>Body</p>\n", emoji("📝")),
+    );
+    expect(render("::: tip[]\nBody\n:::")).toBe(
+      admonition("tip", "Tip", "<p>Body</p>\n", emoji("💡")),
+    );
+  });
+
   it("renders every default type", () => {
-    for (const type of ["note", "tip", "warning", "danger", "info", "success", "question"]) {
+    const types = ["note", "tip", "warning", "danger", "info", "success", "question", "important", "caution"];
+    for (const type of types) {
       expect(render(`::: ${type}\nBody\n:::`)).toContain(`class="admonition admonition-${type}"`);
     }
   });
@@ -43,9 +53,15 @@ describe("docusaurus syntax", () => {
     expect(render("::: unknown\nBody\n:::")).toBe("<p>::: unknown\nBody\n:::</p>\n");
   });
 
+  it("renders inline markdown in the title", () => {
+    expect(render("::: note **Bold** `code` [link](https://example.com)\nBody\n:::")).toContain(
+      '<strong>Bold</strong> <code>code</code> <a href="https://example.com">link</a></span></div>',
+    );
+  });
+
   it("escapes HTML in the title", () => {
     expect(render("::: note <b>Bold</b>\nBody\n:::")).toContain(
-      "&lt;b&gt;Bold&lt;/b&gt;</div>",
+      "&lt;b&gt;Bold&lt;/b&gt;</span></div>",
     );
   });
 
@@ -112,9 +128,48 @@ describe("obsidian syntax", () => {
     );
   });
 
+  it("renders inline markdown in the title", () => {
+    expect(render("> [!note] *Mind* the `gap`\n> Body")).toContain(
+      "<em>Mind</em> the <code>gap</code></span></div>",
+    );
+  });
+
+  it("renders a collapsed foldable callout with -", () => {
+    expect(render("> [!note]- Folded\n> Body")).toBe(
+      '<details class="admonition admonition-note">\n' +
+        `<summary class="admonition-title">${emoji("📝")}<span class="admonition-title-text">Folded</span></summary>\n` +
+        '<div class="admonition-content">\n<p>Body</p>\n</div>\n' +
+        "</details>\n",
+    );
+  });
+
+  it("renders an expanded foldable callout with +", () => {
+    expect(render("> [!tip]+\n> Body")).toBe(
+      '<details class="admonition admonition-tip" open="">\n' +
+        `<summary class="admonition-title">${emoji("💡")}<span class="admonition-title-text">Tip</span></summary>\n` +
+        '<div class="admonition-content">\n<p>Body</p>\n</div>\n' +
+        "</details>\n",
+    );
+  });
+
+  it("keeps a dash after a space as part of the title", () => {
+    expect(render("> [!note] - not folded\n> Body")).toBe(
+      admonition("note", "- not folded", "<p>Body</p>\n", emoji("📝")),
+    );
+  });
+
   it("matches the type case-insensitively", () => {
     expect(render("> [!TIP]\n> Body")).toBe(
       admonition("tip", "Tip", "<p>Body</p>\n", emoji("💡")),
+    );
+  });
+
+  it("renders GitHub alert types", () => {
+    expect(render("> [!IMPORTANT]\n> Body")).toBe(
+      admonition("important", "Important", "<p>Body</p>\n", emoji("❗")),
+    );
+    expect(render("> [!CAUTION]\n> Body")).toBe(
+      admonition("caution", "Caution", "<p>Body</p>\n", emoji("🛑")),
     );
   });
 
