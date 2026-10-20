@@ -26,9 +26,14 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./admonitions.css": "./admonitions.css",
     "./admonitions.min.css": "./admonitions.min.css"
@@ -37,6 +42,9 @@
     "dist",
     "admonitions.css",
     "admonitions.min.css"
+  ],
+  "sideEffects": [
+    "*.css"
   ],
   "scripts": {
     "dev": "vite build --watch",

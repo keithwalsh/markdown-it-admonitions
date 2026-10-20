@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { copyFileSync } from 'fs';
 import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
 
@@ -28,7 +29,13 @@ export default defineConfig({
   plugins: [
     dts({
       include: ['src'],
-      outDir: 'dist'
+      outDir: 'dist',
+      // Bundle the declarations into one file, then copy it to index.d.cts
+      // so CommonJS consumers get types that match the require() entry
+      rollupTypes: true,
+      afterBuild: () => {
+        copyFileSync(resolve(__dirname, 'dist/index.d.ts'), resolve(__dirname, 'dist/index.d.cts'));
+      }
     })
   ]
 });
