@@ -36,7 +36,8 @@
       }
     },
     "./admonitions.css": "./admonitions.css",
-    "./admonitions.min.css": "./admonitions.min.css"
+    "./admonitions.min.css": "./admonitions.min.css",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",

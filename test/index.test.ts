@@ -332,6 +332,26 @@ describe("options", () => {
     expect(html).toBe("<aside>\n<p>Body</p>\n</aside>\n");
   });
 
+  it("applies the latest options when the plugin is used twice", () => {
+    const md = new MarkdownIt()
+      .use(admonitionPlugin, { types: ["note", "tip"] })
+      .use(admonitionPlugin, { types: ["note"], icons: { note: "✏️" }, marker: "!" });
+    expect(md.render("!!! note\nBody\n!!!")).toBe(
+      admonition("note", "Note", "<p>Body</p>\n", emoji("✏️")),
+    );
+    expect(md.render("> [!note]\n> Body")).toContain(emoji("✏️"));
+    expect(md.render("::: note\nBody\n:::")).not.toContain("admonition");
+    expect(md.render("> [!tip]\n> Body")).toContain("<blockquote>");
+  });
+
+  it("turns a syntax style back on or off when the plugin is used again", () => {
+    const md = new MarkdownIt()
+      .use(admonitionPlugin, { docusaurusStyle: false })
+      .use(admonitionPlugin, { obsidianStyle: false });
+    expect(md.render("::: note\nBody\n:::")).toContain('class="admonition admonition-note"');
+    expect(md.render("> [!note]\n> Body")).toContain("<blockquote>");
+  });
+
   it("rejects invalid options", () => {
     expect(() => render("", { types: "note" as unknown as string[] })).toThrow(TypeError);
     expect(() => render("", { marker: "" })).toThrow(TypeError);

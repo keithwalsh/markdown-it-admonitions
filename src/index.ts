@@ -5,6 +5,7 @@ import type { RuleCore } from "markdown-it/lib/parser_core.mjs";
 import type StateBlock from "markdown-it/lib/rules_block/state_block.mjs";
 import type StateCore from "markdown-it/lib/rules_core/state_core.mjs";
 import type Renderer from "markdown-it/lib/renderer.mjs";
+import type Ruler from "markdown-it/lib/ruler.mjs";
 import type Token from "markdown-it/lib/token.mjs";
 
 import type {
@@ -450,27 +451,19 @@ const findClosingFence = (
 };
 
 /**
- * Create a container rule for a specific admonition type
- * @param options - Configuration for the admonition container
+ * Create the Docusaurus-style container rule for all admonition types
+ * @param types - Array of valid admonition type names
+ * @param marker - Marker character(s) for the fence
  * @returns A RuleBlock function that parses the admonition syntax
- * @throws {TypeError} if options are invalid
+ * @throws {TypeError} if the marker is invalid
  */
 const createAdmonitionContainer = (
-  options: MarkdownItAdmonitionOptions,
+  types: readonly string[],
+  marker: string,
 ): RuleBlock => {
-  // Validate options
-  if (!isNonEmptyString(options.name)) {
-    throw new TypeError("Container options.name must be a non-empty string");
+  if (!isNonEmptyString(marker)) {
+    throw new TypeError("Container marker must be a non-empty string");
   }
-  if (options.marker !== undefined && !isNonEmptyString(options.marker)) {
-    throw new TypeError("Container options.marker must be a non-empty string");
-  }
-
-  const {
-    name,
-    marker = ":",
-    validate = (params: string): boolean => getContainerType(params) === name.toLowerCase(),
-  } = options;
 
   const markerStart = marker[0]!; // Safe: marker is validated to be non-empty
   const markerLength = marker.length;
@@ -505,7 +498,9 @@ const createAdmonitionContainer = (
     const markup = marker.repeat(markerCount);
     const params = state.src.slice(position, currentLineMax);
 
-    if (!validate(params, markup)) return false;
+    const containerType = getContainerType(params);
+    const name = types.find((type) => type.toLowerCase() === containerType);
+    if (name === undefined) return false;
     if (silent) return true;
 
     // Search for the closing fence
@@ -675,6 +670,7 @@ interface IconRenderOptions {
 /**
  * Helper function to register symmetric render rules for an admonition type
  * Ensures that open and close render functions are always properly paired
+ * Replaces rules from an earlier md.use() call so its options take effect
  * @param md - The markdown-it instance
  * @param type - The admonition type name
  * @param iconOptions - Icon rendering options
@@ -686,11 +682,6 @@ const registerRenderRules = (
   iconOptions: IconRenderOptions,
   customRenders: Readonly<Record<string, CustomRenderPair>>,
 ): void => {
-  // Skip if already registered
-  if (md.renderer.rules[`admonition_${type}_open`]) {
-    return;
-  }
-
   // Get custom render pair (validated to have both open and close, or neither)
   const customRenderPair = customRenders[type];
 
@@ -827,6 +818,30 @@ const createObsidianCalloutRule = (
   return obsidianCallout;
 };
 
+const DOCUSAURUS_RULE = "docusaurus_admonition";
+const OBSIDIAN_RULE = "obsidian_callout";
+
+/**
+ * Replace a rule added by an earlier md.use() call, or add it the first time
+ * Re-enables the rule in case an earlier call disabled its syntax style
+ */
+const setRule = <T>(
+  ruler: Ruler<T>,
+  name: string,
+  rule: T,
+  add: () => void,
+  alt?: string[],
+): void => {
+  try {
+    ruler.at(name, rule, alt ? { alt } : undefined);
+  } catch {
+    add();
+  }
+  ruler.enable(name, true);
+};
+
+const DOCUSAURUS_ALT = ["paragraph", "reference", "blockquote", "list"];
+
 /**
  * Main plugin function for markdown-it admonitions
  * 
@@ -887,35 +902,33 @@ export const admonitionPlugin = (
     useLucide: useLucideIcons,
   };
 
-  // Register Docusaurus-style syntax for each admonition type
+  // Register Docusaurus-style syntax
   if (docusaurusStyle) {
-    for (const type of typesArray) {
-      const containerOptions: MarkdownItAdmonitionOptions = {
-        name: type,
-        marker,
-        validate: (params: string): boolean => getContainerType(params) === type.toLowerCase(),
-      };
-
-      const container = createAdmonitionContainer(containerOptions);
-
-      md.block.ruler.before("fence", `admonition_${type}`, container, {
-        alt: ["paragraph", "reference", "blockquote", "list"],
-      });
-
-      // Set up render rules (if not already set by Obsidian style)
-      registerRenderRules(md, type, iconOptions, customRenders);
-    }
+    const container = createAdmonitionContainer(typesArray, marker);
+    setRule(
+      md.block.ruler,
+      DOCUSAURUS_RULE,
+      container,
+      () => md.block.ruler.before("fence", DOCUSAURUS_RULE, container, { alt: DOCUSAURUS_ALT }),
+      DOCUSAURUS_ALT,
+    );
+  } else {
+    md.block.ruler.disable(DOCUSAURUS_RULE, true);
   }
 
   // Register Obsidian-style syntax
   if (obsidianStyle) {
-    const obsidianRule = createObsidianCalloutRule(typesArray);
-    md.core.ruler.after("block", "obsidian_callout", obsidianRule);
+    const callout = createObsidianCalloutRule(typesArray);
+    setRule(md.core.ruler, OBSIDIAN_RULE, callout, () =>
+      md.core.ruler.after("block", OBSIDIAN_RULE, callout),
+    );
+  } else {
+    md.core.ruler.disable(OBSIDIAN_RULE, true);
+  }
 
-    // Set up render rules for each type (shared with container style)
-    for (const type of typesArray) {
-      registerRenderRules(md, type, iconOptions, customRenders);
-    }
+  // Set up render rules for each type (shared by both styles)
+  for (const type of typesArray) {
+    registerRenderRules(md, type, iconOptions, customRenders);
   }
 };
 
