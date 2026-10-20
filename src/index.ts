@@ -25,11 +25,11 @@ const MIN_MARKER_NUM = 3;
 const BRACKET_TITLE_PATTERN = /^\s*([^\s[]+)\[(.*)\]\s*$/;
 
 /**
- * Read the admonition type from the text after the opening marker
+ * Read the admonition type from the text after the opening marker, lowercased
  * Accepts "type Title" and "type[Title]"
  */
 const getContainerType = (params: string): string | undefined =>
-  /^[^\s[]+/.exec(params.trim())?.[0];
+  /^[^\s[]+/.exec(params.trim())?.[0].toLowerCase();
 
 const defaultTypes: readonly string[] = [
   "note",
@@ -469,7 +469,7 @@ const createAdmonitionContainer = (
   const {
     name,
     marker = ":",
-    validate = (params: string): boolean => getContainerType(params) === name,
+    validate = (params: string): boolean => getContainerType(params) === name.toLowerCase(),
   } = options;
 
   const markerStart = marker[0]!; // Safe: marker is validated to be non-empty
@@ -724,6 +724,17 @@ const registerRenderRules = (
 const CALLOUT_PATTERN = /^\[!([^\]\n]*)\]([+-]?)([^\n]*)(?:\n|$)/;
 
 /**
+ * Obsidian callout aliases and the type each one renders as
+ * A registered type with the same name takes precedence over its alias
+ */
+const calloutAliases: ReadonlyMap<string, string> = new Map([
+  ["hint", "tip"],
+  ["faq", "question"],
+  ["error", "danger"],
+  ["check", "success"],
+]);
+
+/**
  * Find the blockquote_close token matching the blockquote_open at the given index
  * @returns Index of the matching close token, or -1 if none is found
  */
@@ -778,14 +789,17 @@ const createObsidianCalloutRule = (
       const match = CALLOUT_PATTERN.exec(inline.content);
       if (!match) continue;
 
-      const calloutType = match[1]!.toLowerCase();
+      // An alias renders as its type, titled with the alias by default
+      const name = match[1]!.toLowerCase();
+      const alias = types.includes(name) ? undefined : calloutAliases.get(name);
+      const calloutType = alias ?? name;
       if (!types.includes(calloutType)) continue;
 
       const closeIndex = findBlockquoteClose(tokens, index);
       if (closeIndex === -1) continue;
 
       const fold = match[2]!;
-      const title = match[3]!.trim();
+      const title = match[3]!.trim() || (alias ? name.charAt(0).toUpperCase() + name.slice(1) : "");
       const tag = fold ? "details" : "div";
 
       openToken.type = `admonition_${calloutType}_open`;
@@ -879,7 +893,7 @@ export const admonitionPlugin = (
       const containerOptions: MarkdownItAdmonitionOptions = {
         name: type,
         marker,
-        validate: (params: string): boolean => getContainerType(params) === type,
+        validate: (params: string): boolean => getContainerType(params) === type.toLowerCase(),
       };
 
       const container = createAdmonitionContainer(containerOptions);
