@@ -12,7 +12,7 @@ const admonition = (type: string, title: string, content: string, icon = ""): st
   `<div class="admonition-content">\n${content}</div>\n` +
   `</div>\n`;
 
-const emoji = (icon: string): string => `<span class="admonition-icon">${icon}</span>`;
+const emoji = (icon: string): string => `<span class="admonition-icon" aria-hidden="true">${icon}</span>`;
 
 describe("docusaurus syntax", () => {
   it("renders an admonition with the default title and icon", () => {
@@ -225,7 +225,7 @@ describe("options", () => {
 
   it("renders Lucide placeholders with both naming conventions", () => {
     expect(render("::: note\nBody\n:::", { lucideIcons: true })).toContain(
-      '<span class="admonition-icon admonition-icon-lucide" data-lucide-icon="LuStickyNote" data-lucide="sticky-note"></span>',
+      '<span class="admonition-icon admonition-icon-lucide" aria-hidden="true" data-lucide-icon="LuStickyNote" data-lucide="sticky-note"></span>',
     );
     expect(render("::: tip\nBody\n:::", { lucideIcons: { tip: "grid-2x2" } })).toContain(
       'data-lucide-icon="LuGrid2X2" data-lucide="grid-2x2"',

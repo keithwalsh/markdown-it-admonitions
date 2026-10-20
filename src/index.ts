@@ -587,10 +587,10 @@ const createDefaultRenderPair = (
           // Render Lucide icon placeholder with data attributes
           // data-lucide-icon holds the react-icons/lu name, data-lucide the Lucide name
           const lucideAttr = iconConfig.lucideName ? ` data-lucide="${escapeHtml(iconConfig.lucideName)}"` : "";
-          result += `<span class="admonition-icon admonition-icon-lucide" data-lucide-icon="${escapeHtml(iconConfig.icon)}"${lucideAttr}></span>`;
+          result += `<span class="admonition-icon admonition-icon-lucide" aria-hidden="true" data-lucide-icon="${escapeHtml(iconConfig.icon)}"${lucideAttr}></span>`;
         } else {
           // Render emoji icon directly
-          result += `<span class="admonition-icon">${iconConfig.icon}</span>`;
+          result += `<span class="admonition-icon" aria-hidden="true">${iconConfig.icon}</span>`;
         }
       }
       result += escapeHtml(title);
