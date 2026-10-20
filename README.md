@@ -30,6 +30,15 @@ This is a warning with the default title.
 `);
 ```
 
+With CommonJS, use the named export (or `.default`):
+
+```javascript
+const MarkdownIt = require('markdown-it');
+const { admonitionPlugin } = require('markdown-it-admonitions');
+
+const md = new MarkdownIt().use(admonitionPlugin);
+```
+
 ## Syntax
 
 The plugin supports two syntax styles:
