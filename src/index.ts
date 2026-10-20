@@ -5,6 +5,7 @@ import type { RuleCore } from "markdown-it/lib/parser_core.mjs";
 import type StateBlock from "markdown-it/lib/rules_block/state_block.mjs";
 import type StateCore from "markdown-it/lib/rules_core/state_core.mjs";
 import type Renderer from "markdown-it/lib/renderer.mjs";
+import type Ruler from "markdown-it/lib/ruler.mjs";
 import type Token from "markdown-it/lib/token.mjs";
 
 import type {
@@ -669,6 +670,7 @@ interface IconRenderOptions {
 /**
  * Helper function to register symmetric render rules for an admonition type
  * Ensures that open and close render functions are always properly paired
+ * Replaces rules from an earlier md.use() call so its options take effect
  * @param md - The markdown-it instance
  * @param type - The admonition type name
  * @param iconOptions - Icon rendering options
@@ -680,11 +682,6 @@ const registerRenderRules = (
   iconOptions: IconRenderOptions,
   customRenders: Readonly<Record<string, CustomRenderPair>>,
 ): void => {
-  // Skip if already registered
-  if (md.renderer.rules[`admonition_${type}_open`]) {
-    return;
-  }
-
   // Get custom render pair (validated to have both open and close, or neither)
   const customRenderPair = customRenders[type];
 
@@ -821,6 +818,30 @@ const createObsidianCalloutRule = (
   return obsidianCallout;
 };
 
+const DOCUSAURUS_RULE = "docusaurus_admonition";
+const OBSIDIAN_RULE = "obsidian_callout";
+
+/**
+ * Replace a rule added by an earlier md.use() call, or add it the first time
+ * Re-enables the rule in case an earlier call disabled its syntax style
+ */
+const setRule = <T>(
+  ruler: Ruler<T>,
+  name: string,
+  rule: T,
+  add: () => void,
+  alt?: string[],
+): void => {
+  try {
+    ruler.at(name, rule, alt ? { alt } : undefined);
+  } catch {
+    add();
+  }
+  ruler.enable(name, true);
+};
+
+const DOCUSAURUS_ALT = ["paragraph", "reference", "blockquote", "list"];
+
 /**
  * Main plugin function for markdown-it admonitions
  * 
@@ -884,15 +905,25 @@ export const admonitionPlugin = (
   // Register Docusaurus-style syntax
   if (docusaurusStyle) {
     const container = createAdmonitionContainer(typesArray, marker);
-    md.block.ruler.before("fence", "docusaurus_admonition", container, {
-      alt: ["paragraph", "reference", "blockquote", "list"],
-    });
+    setRule(
+      md.block.ruler,
+      DOCUSAURUS_RULE,
+      container,
+      () => md.block.ruler.before("fence", DOCUSAURUS_RULE, container, { alt: DOCUSAURUS_ALT }),
+      DOCUSAURUS_ALT,
+    );
+  } else {
+    md.block.ruler.disable(DOCUSAURUS_RULE, true);
   }
 
   // Register Obsidian-style syntax
   if (obsidianStyle) {
     const callout = createObsidianCalloutRule(typesArray);
-    md.core.ruler.after("block", "obsidian_callout", callout);
+    setRule(md.core.ruler, OBSIDIAN_RULE, callout, () =>
+      md.core.ruler.after("block", OBSIDIAN_RULE, callout),
+    );
+  } else {
+    md.core.ruler.disable(OBSIDIAN_RULE, true);
   }
 
   // Set up render rules for each type (shared by both styles)
