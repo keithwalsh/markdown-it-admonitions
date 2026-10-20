@@ -156,6 +156,16 @@ details.admonition:not([open]) > summary.admonition-title {
   --admonition-color: #7c4dff;
 }
 
+/* Important admonition - Pink theme */
+.admonition-important {
+  --admonition-color: #e91e63;
+}
+
+/* Caution admonition - Deep orange theme */
+.admonition-caution {
+  --admonition-color: #f4511e;
+}
+
 /* Dark mode support
    Follows the OS setting unless an ancestor has a .light class or
    data-theme="light"; a .dark class or data-theme="dark" turns it on */
