@@ -275,7 +275,9 @@ The default stylesheet includes:
   - **Danger**: Red theme
   - **Success**: Green theme
   - **Question**: Purple theme
-- Automatic dark mode support via `prefers-color-scheme`
+- Automatic dark mode support via `prefers-color-scheme`, with theme overrides (see [Dark mode](#dark-mode))
+- Colours driven by CSS custom properties, so a custom type needs one line of CSS
+- A neutral grey for custom types that don't set a colour
 - Responsive design for mobile devices
 - Print-friendly styles
 - Proper spacing for nested content (lists, code blocks, etc.)
@@ -289,19 +291,30 @@ You can preview all admonition styles by opening `demo.html` in your browser. Th
 
 ### Customisation
 
-You can override the default styles by adding your own CSS rules:
+Each type sets one custom property, `--admonition-color`, and the border, background and title colours are derived from it. To colour a custom type or recolour a built-in one:
 
 ```css
-/* Example: Custom styling for note admonitions */
-.admonition-note {
-  border-left-color: #0066cc;
-}
-
-.admonition-note .admonition-title {
-  background-colour: #e6f2ff;
-  colour: #0066cc;
+.admonition-custom {
+  --admonition-color: #e91e63;
 }
 ```
+
+You can also override the derived colours directly:
+
+| Property | Default (light) | Default (dark) |
+|----------|-----------------|----------------|
+| `--admonition-color` | per type; `#6b7280` for custom types | same |
+| `--admonition-bg` | `--admonition-color` at 10% opacity | at 15% opacity |
+| `--admonition-title-color` | `--admonition-color` mixed 60% with black | mixed 60% with white |
+
+The derived colours use `color-mix()`, which all current browsers support.
+
+### Dark mode
+
+The stylesheet follows the operating system's `prefers-color-scheme` setting. If your site has its own theme switch, put a class or attribute on `<html>` or `<body>` (or any ancestor of the admonitions):
+
+- `class="dark"` or `data-theme="dark"` turns dark mode on.
+- `class="light"` or `data-theme="light"` keeps the light colours, even when the operating system is in dark mode. Light-only sites should set one of these.
 
 ## TypeScript
 
