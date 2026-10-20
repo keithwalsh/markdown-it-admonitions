@@ -158,6 +158,53 @@ describe("obsidian syntax", () => {
     );
   });
 
+  it("renders inside list items", () => {
+    expect(render("- item\n\n  > [!note]\n  > Body")).toBe(
+      "<ul>\n<li>\n<p>item</p>\n" +
+        admonition("note", "Note", "<p>Body</p>\n", emoji("📝")) +
+        "</li>\n</ul>\n",
+    );
+  });
+
+  it("renders nested lists", () => {
+    expect(render("> [!note]\n> - a\n>   - b\n> - c")).toBe(
+      admonition(
+        "note",
+        "Note",
+        "<ul>\n<li>a\n<ul>\n<li>b</li>\n</ul>\n</li>\n<li>c</li>\n</ul>\n",
+        emoji("📝"),
+      ),
+    );
+  });
+
+  it("renders indented code", () => {
+    expect(render("> [!note]\n>\n>     code")).toBe(
+      admonition("note", "Note", "<pre><code>code\n</code></pre>\n", emoji("📝")),
+    );
+  });
+
+  it("keeps lazy continuation lines in the callout", () => {
+    expect(render("> [!note]\n> Body\nlazy")).toBe(
+      admonition("note", "Note", "<p>Body\nlazy</p>\n", emoji("📝")),
+    );
+  });
+
+  it("maps content tokens to their source lines", () => {
+    const tokens = new MarkdownIt().use(admonitionPlugin).parse("Intro\n\n> [!note]\n> Body\n> - item", {});
+    const maps = tokens.filter((token) => token.map).map((token) => [token.type, token.map]);
+    expect(maps).toEqual([
+      ["paragraph_open", [0, 1]],
+      ["inline", [0, 1]],
+      ["admonition_note_open", [2, 5]],
+      ["paragraph_open", [3, 4]],
+      ["inline", [3, 4]],
+      ["bullet_list_open", [4, 5]],
+      ["list_item_open", [4, 5]],
+      ["paragraph_open", [4, 5]],
+      ["inline", [4, 5]],
+    ]);
+  });
+
   it("is disabled by obsidianStyle: false", () => {
     expect(render("> [!note]\n> Body", { obsidianStyle: false })).toBe(
       "<blockquote>\n<p>[!note]\nBody</p>\n</blockquote>\n",

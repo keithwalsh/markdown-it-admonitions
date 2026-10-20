@@ -1,7 +1,9 @@
 import type MarkdownIt from "markdown-it";
 import type { Options } from "markdown-it";
 import type { RuleBlock } from "markdown-it/lib/parser_block.mjs";
+import type { RuleCore } from "markdown-it/lib/parser_core.mjs";
 import type StateBlock from "markdown-it/lib/rules_block/state_block.mjs";
+import type StateCore from "markdown-it/lib/rules_core/state_core.mjs";
 import type Renderer from "markdown-it/lib/renderer.mjs";
 import type Token from "markdown-it/lib/token.mjs";
 
@@ -677,157 +679,37 @@ const registerRenderRules = (
 };
 
 /**
- * Interface for Obsidian callout parsing result
+ * Matches the first line of an Obsidian callout: [!type] followed by an optional title
  */
-interface ObsidianCalloutInfo {
-  calloutType: string;
-  title: string;
-}
+const CALLOUT_PATTERN = /^\[!([^\]\n]*)\]([^\n]*)(?:\n|$)/;
 
 /**
- * Parses the [!type] pattern from an Obsidian callout line
- * @returns Callout info if valid pattern found, null otherwise
+ * Find the blockquote_close token matching the blockquote_open at the given index
+ * @returns Index of the matching close token, or -1 if none is found
  */
-const parseObsidianCalloutType = (
-  state: StateBlock,
-  startLine: number,
-  types: readonly string[],
-): ObsidianCalloutInfo | null => {
-  const position = getLineStart(state, startLine);
-  const max = getLineEnd(state, startLine);
-
-  // Check if line starts with >
-  if (state.src[position] !== ">") return null;
-
-  let linePosition = position + 1;
-  
-  // Skip optional space after >
-  if (state.src[linePosition] === " ") linePosition++;
-
-  // Check for [!type] pattern
-  if (state.src[linePosition] !== "[" || state.src[linePosition + 1] !== "!") {
-    return null;
+const findBlockquoteClose = (tokens: Token[], openIndex: number): number => {
+  const level = tokens[openIndex]!.level;
+  for (let index = openIndex + 1; index < tokens.length; index++) {
+    const token = tokens[index]!;
+    if (token.type === "blockquote_close" && token.level === level) {
+      return index;
+    }
   }
-
-  // Find the closing ]
-  let typeEndPosition = linePosition + 2;
-  while (typeEndPosition < max && state.src[typeEndPosition] !== "]") {
-    typeEndPosition++;
-  }
-
-  if (typeEndPosition >= max) return null;
-
-  // Extract and validate the type
-  const calloutType = state.src.slice(linePosition + 2, typeEndPosition).toLowerCase();
-  if (!types.includes(calloutType)) return null;
-
-  // Extract optional title
-  const title = typeEndPosition + 1 < max 
-    ? state.src.slice(typeEndPosition + 1, max).trim()
-    : "";
-
-  return { calloutType, title };
-};
-
-/**
- * Extracts content lines from an Obsidian blockquote
- * Collects all lines starting with > until a non-blockquote line is found
- */
-const extractObsidianContent = (
-  state: StateBlock,
-  startLine: number,
-  endLine: number,
-): { contentLines: string[]; nextLine: number } => {
-  const contentLines: string[] = [];
-  let nextLine = startLine + 1;
-
-  while (nextLine < endLine) {
-    const nextPosition = getLineStart(state, nextLine);
-    const nextMax = getLineEnd(state, nextLine);
-
-    if (state.src[nextPosition] !== ">") break;
-
-    let contentStartPosition = nextPosition + 1;
-    if (state.src[contentStartPosition] === " ") contentStartPosition++;
-
-    contentLines.push(state.src.slice(contentStartPosition, nextMax));
-    nextLine++;
-  }
-
-  return { contentLines, nextLine };
-};
-
-/**
- * Interface for saved parsing arrays
- */
-interface SavedParsingArrays {
-  src: string;
-  bMarks: number[];
-  eMarks: number[];
-  tShift: number[];
-  sCount: number[];
-}
-
-/**
- * Processes content lines by temporarily replacing state parsing arrays
- * SYMMETRIC OPERATION: Saves and restores parsing context
- */
-const processContentWithTemporaryState = (
-  state: StateBlock,
-  contentLines: string[],
-): void => {
-  if (contentLines.length === 0) return;
-
-  const contentSrc = contentLines.join("\n");
-  
-  // SYMMETRIC OPERATION: Save original parsing arrays
-  const saved: SavedParsingArrays = {
-    src: state.src,
-    bMarks: state.bMarks,
-    eMarks: state.eMarks,
-    tShift: state.tShift,
-    sCount: state.sCount,
-  };
-
-  // Set up temporary state for content processing
-  state.src = contentSrc;
-  state.bMarks = [];
-  state.eMarks = [];
-  state.tShift = [];
-  state.sCount = [];
-
-  let offset = 0;
-  for (let i = 0; i < contentLines.length; i++) {
-    const line = contentLines[i];
-    if (line === undefined) continue;
-    
-    state.bMarks.push(offset);
-    state.eMarks.push(offset + line.length);
-    state.tShift.push(0);
-    state.sCount.push(0);
-    offset += line.length + 1;
-  }
-
-  state.lineMax = contentLines.length;
-  state.md.block.tokenize(state, 0, contentLines.length);
-
-  // SYMMETRIC OPERATION: Restore original parsing arrays
-  state.src = saved.src;
-  state.bMarks = saved.bMarks;
-  state.eMarks = saved.eMarks;
-  state.tShift = saved.tShift;
-  state.sCount = saved.sCount;
+  return -1;
 };
 
 /**
  * Create an Obsidian-style callout rule
+ * Runs after block parsing and turns blockquotes whose first line is [!type]
+ * into admonition tokens, so markdown-it's own blockquote rule handles the
+ * content (lists, code, nesting, lazy continuation and source maps)
  * @param types - Array of valid admonition type names
- * @returns A RuleBlock function that parses Obsidian callout syntax
+ * @returns A core rule that converts callout blockquotes into admonitions
  * @throws {TypeError} if types array is invalid
  */
 const createObsidianCalloutRule = (
   types: readonly string[],
-): RuleBlock => {
+): RuleCore => {
   // Validate types array
   if (!Array.isArray(types) || types.length === 0) {
     throw new TypeError("Callout rule types parameter must be a non-empty array");
@@ -836,48 +718,53 @@ const createObsidianCalloutRule = (
     throw new TypeError("Callout rule types parameter must contain only non-empty strings");
   }
 
-  const obsidianCallout: RuleBlock = (
-    state: StateBlock,
-    startLine: number,
-    endLine: number,
-    silent: boolean,
-  ): boolean => {
-    // Parse callout type and title
-    const calloutInfo = parseObsidianCalloutType(state, startLine, types);
-    if (!calloutInfo) return false;
+  const obsidianCallout: RuleCore = (state: StateCore): void => {
+    const tokens = state.tokens;
 
-    if (silent) return true;
+    for (let index = 0; index < tokens.length; index++) {
+      const openToken = tokens[index]!;
+      const paragraphOpen = tokens[index + 1];
+      const inline = tokens[index + 2];
 
-    // Extract content lines
-    const { contentLines, nextLine } = extractObsidianContent(state, startLine, endLine);
+      if (
+        openToken.type !== "blockquote_open" ||
+        paragraphOpen?.type !== "paragraph_open" ||
+        inline?.type !== "inline"
+      ) {
+        continue;
+      }
 
-    // SYMMETRIC OPERATION: Save state before modifications
-    const savedState = saveState(state);
-    state.parentType = "blockquote" as typeof state.parentType;
+      // Parse the [!type] pattern on the first line of the first paragraph
+      const match = CALLOUT_PATTERN.exec(inline.content);
+      if (!match) continue;
 
-    const calloutTypeName = calloutInfo.calloutType;
-    const info = calloutTypeName + (calloutInfo.title ? " " + calloutInfo.title : "");
+      const calloutType = match[1]!.toLowerCase();
+      if (!types.includes(calloutType)) continue;
 
-    // Push OPEN token first
-    const openToken = state.push(`admonition_${calloutTypeName}_open`, "div", 1);
-    openToken.markup = ">";
-    openToken.block = true;
-    openToken.info = info;
-    openToken.map = [startLine, nextLine];
+      const closeIndex = findBlockquoteClose(tokens, index);
+      if (closeIndex === -1) continue;
 
-    // Process content BETWEEN open and close tokens
-    processContentWithTemporaryState(state, contentLines);
+      const title = match[2]!.trim();
 
-    // Push CLOSE token after content
-    const closeToken = state.push(`admonition_${calloutTypeName}_close`, "div", -1);
-    closeToken.markup = ">";
-    closeToken.block = true;
+      openToken.type = `admonition_${calloutType}_open`;
+      openToken.tag = "div";
+      openToken.info = calloutType + (title ? " " + title : "");
 
-    // SYMMETRIC OPERATION: Restore state after modifications
-    restoreState(state, savedState);
-    state.line = nextLine;
+      const closeToken = tokens[closeIndex]!;
+      closeToken.type = `admonition_${calloutType}_close`;
+      closeToken.tag = "div";
 
-    return true;
+      // Remove the [!type] line from the first paragraph, or the whole
+      // paragraph when the line was all it held
+      const rest = inline.content.slice(match[0].length);
+      if (rest.length > 0) {
+        inline.content = rest;
+        if (paragraphOpen.map) paragraphOpen.map = [paragraphOpen.map[0] + 1, paragraphOpen.map[1]];
+        if (inline.map) inline.map = [inline.map[0] + 1, inline.map[1]];
+      } else {
+        tokens.splice(index + 1, 3);
+      }
+    }
   };
 
   return obsidianCallout;
@@ -969,9 +856,7 @@ export const admonitionPlugin = (
   // Register Obsidian-style syntax
   if (obsidianStyle) {
     const obsidianRule = createObsidianCalloutRule(typesArray);
-    md.block.ruler.before("blockquote", "obsidian_callout", obsidianRule, {
-      alt: ["paragraph", "reference", "blockquote", "list"],
-    });
+    md.core.ruler.after("block", "obsidian_callout", obsidianRule);
 
     // Set up render rules for each type (shared with container style)
     for (const type of typesArray) {
