@@ -70,6 +70,10 @@ Titles can contain inline Markdown, such as `**bold**`, `` `code` `` or links.
 - `info` ℹ️
 - `success` ✅
 - `question` ❓
+- `important` ❗
+- `caution` 🛑
+
+`important` and `caution`, together with `note`, `tip` and `warning`, cover GitHub's alert types, so `> [!IMPORTANT]` and `> [!CAUTION]` render as admonitions.
 
 ## Options
 
@@ -158,6 +162,8 @@ Whichever convention you use, every placeholder carries the icon name in both fo
 | info | `LuInfo` | `info` | ℹ️ |
 | success | `LuCircleCheck` | `circle-check` | ✅ |
 | question | `LuCircleHelp` | `circle-help` | ❓ |
+| important | `LuMessageSquareWarning` | `message-square-warning` | ❗ |
+| caution | `LuOctagonAlert` | `octagon-alert` | 🛑 |
 
 **HTML output with Lucide icons enabled:**
 
@@ -284,6 +290,8 @@ The default stylesheet includes:
   - **Danger**: Red theme
   - **Success**: Green theme
   - **Question**: Purple theme
+  - **Important**: Pink theme
+  - **Caution**: Deep orange theme
 - Automatic dark mode support via `prefers-color-scheme`, with theme overrides (see [Dark mode](#dark-mode))
 - Colours driven by CSS custom properties, so a custom type needs one line of CSS
 - A neutral grey for custom types that don't set a colour
