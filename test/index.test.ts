@@ -124,6 +124,30 @@ describe("obsidian syntax", () => {
     );
   });
 
+  it("renders a collapsed foldable callout with -", () => {
+    expect(render("> [!note]- Folded\n> Body")).toBe(
+      '<details class="admonition admonition-note">\n' +
+        `<summary class="admonition-title">${emoji("📝")}<span class="admonition-title-text">Folded</span></summary>\n` +
+        '<div class="admonition-content">\n<p>Body</p>\n</div>\n' +
+        "</details>\n",
+    );
+  });
+
+  it("renders an expanded foldable callout with +", () => {
+    expect(render("> [!tip]+\n> Body")).toBe(
+      '<details class="admonition admonition-tip" open="">\n' +
+        `<summary class="admonition-title">${emoji("💡")}<span class="admonition-title-text">Tip</span></summary>\n` +
+        '<div class="admonition-content">\n<p>Body</p>\n</div>\n' +
+        "</details>\n",
+    );
+  });
+
+  it("keeps a dash after a space as part of the title", () => {
+    expect(render("> [!note] - not folded\n> Body")).toBe(
+      admonition("note", "- not folded", "<p>Body</p>\n", emoji("📝")),
+    );
+  });
+
   it("matches the type case-insensitively", () => {
     expect(render("> [!TIP]\n> Body")).toBe(
       admonition("tip", "Tip", "<p>Body</p>\n", emoji("💡")),

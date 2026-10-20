@@ -580,10 +580,17 @@ const createDefaultRenderPair = (
     token.attrJoin("class", "admonition");
     token.attrJoin("class", `admonition-${name}`);
 
+    // Foldable callouts render as <details>, open when marked with "+"
+    const foldable = token.tag === "details";
+    if (foldable && token.meta?.fold === "+") {
+      token.attrSet("open", "");
+    }
+    const titleTag = foldable ? "summary" : "div";
+
     let result = slf.renderToken(tokens, index, _options);
 
     if (renderTitle) {
-      result += '<div class="admonition-title">';
+      result += `<${titleTag} class="admonition-title">`;
       if (iconConfig.icon) {
         if (iconConfig.isLucide) {
           // Render Lucide icon placeholder with data attributes
@@ -596,7 +603,7 @@ const createDefaultRenderPair = (
         }
       }
       result += `<span class="admonition-title-text">${md.renderInline(title, env)}</span>`;
-      result += "</div>\n";
+      result += `</${titleTag}>\n`;
       result += '<div class="admonition-content">\n';
     }
 
@@ -681,9 +688,10 @@ const registerRenderRules = (
 };
 
 /**
- * Matches the first line of an Obsidian callout: [!type] followed by an optional title
+ * Matches the first line of an Obsidian callout: [!type], an optional fold
+ * marker (- collapsed, + expanded) and an optional title
  */
-const CALLOUT_PATTERN = /^\[!([^\]\n]*)\]([^\n]*)(?:\n|$)/;
+const CALLOUT_PATTERN = /^\[!([^\]\n]*)\]([+-]?)([^\n]*)(?:\n|$)/;
 
 /**
  * Find the blockquote_close token matching the blockquote_open at the given index
@@ -746,15 +754,18 @@ const createObsidianCalloutRule = (
       const closeIndex = findBlockquoteClose(tokens, index);
       if (closeIndex === -1) continue;
 
-      const title = match[2]!.trim();
+      const fold = match[2]!;
+      const title = match[3]!.trim();
+      const tag = fold ? "details" : "div";
 
       openToken.type = `admonition_${calloutType}_open`;
-      openToken.tag = "div";
+      openToken.tag = tag;
       openToken.info = calloutType + (title ? " " + title : "");
+      if (fold) openToken.meta = { ...openToken.meta, fold };
 
       const closeToken = tokens[closeIndex]!;
       closeToken.type = `admonition_${calloutType}_close`;
-      closeToken.tag = "div";
+      closeToken.tag = tag;
 
       // Remove the [!type] line from the first paragraph, or the whole
       // paragraph when the line was all it held
