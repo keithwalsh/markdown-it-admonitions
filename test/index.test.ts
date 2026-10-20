@@ -34,7 +34,8 @@ describe("docusaurus syntax", () => {
   });
 
   it("renders every default type", () => {
-    for (const type of ["note", "tip", "warning", "danger", "info", "success", "question"]) {
+    const types = ["note", "tip", "warning", "danger", "info", "success", "question", "important", "caution"];
+    for (const type of types) {
       expect(render(`::: ${type}\nBody\n:::`)).toContain(`class="admonition admonition-${type}"`);
     }
   });
@@ -151,6 +152,15 @@ describe("obsidian syntax", () => {
   it("matches the type case-insensitively", () => {
     expect(render("> [!TIP]\n> Body")).toBe(
       admonition("tip", "Tip", "<p>Body</p>\n", emoji("💡")),
+    );
+  });
+
+  it("renders GitHub alert types", () => {
+    expect(render("> [!IMPORTANT]\n> Body")).toBe(
+      admonition("important", "Important", "<p>Body</p>\n", emoji("❗")),
+    );
+    expect(render("> [!CAUTION]\n> Body")).toBe(
+      admonition("caution", "Caution", "<p>Body</p>\n", emoji("🛑")),
     );
   });
 
