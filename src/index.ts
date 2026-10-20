@@ -603,9 +603,12 @@ const createDefaultRenderPair = (
     const info = token.info.trim();
     const title = info.slice(name.length).trim() || name.charAt(0).toUpperCase() + name.slice(1);
 
-    // Add classes to the opening tag
-    token.attrJoin("class", "admonition");
-    token.attrJoin("class", `admonition-${name}`);
+    // Add classes to the opening tag, skipping any already there so
+    // rendering the same tokens twice doesn't repeat them
+    const classes = (token.attrGet("class") ?? "").split(" ");
+    for (const className of ["admonition", `admonition-${name}`]) {
+      if (!classes.includes(className)) token.attrJoin("class", className);
+    }
 
     // Foldable callouts render as <details>, open when marked with "+"
     const foldable = token.tag === "details";

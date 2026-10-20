@@ -267,6 +267,16 @@ describe("obsidian syntax", () => {
   });
 });
 
+describe("rendering", () => {
+  it("renders the same tokens twice without repeating classes", () => {
+    const md = new MarkdownIt().use(admonitionPlugin);
+    const tokens = md.parse("::: note\nBody\n:::\n\n> [!tip]-\n> Body", {});
+    const first = md.renderer.render(tokens, md.options, {});
+    expect(md.renderer.render(tokens, md.options, {})).toBe(first);
+    expect(first).toContain('<div class="admonition admonition-note">');
+  });
+});
+
 describe("options", () => {
   it("registers custom types", () => {
     expect(render("::: custom\nBody\n:::", { types: ["custom"] })).toBe(
