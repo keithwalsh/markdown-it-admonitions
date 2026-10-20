@@ -10,8 +10,9 @@
   margin: 1.5625em 0;
   padding: 0;
   overflow: hidden;
-  border-left: 7px solid;
+  border-left: 7px solid var(--admonition-color, currentColor);
   border-radius: 4px;
+  background-color: var(--admonition-bg, transparent);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   font-size: 0.9em;
   line-height: 1.6;
@@ -26,6 +27,7 @@
   display: flex;
   align-items: center;
   gap: 0.3rem;
+  color: var(--admonition-title-color, inherit);
 }
 
 /* Icon styling */
@@ -84,72 +86,51 @@ svg.admonition-icon-lucide {
 
 /* Note admonition - Blue theme */
 .admonition-note {
-  border-left-color: rgb(2, 122, 255);
-  background-color: rgba(2, 122, 255, 0.1);
-}
-
-.admonition-note .admonition-title {
-  color: #2962ff;
+  --admonition-color: rgb(2, 122, 255);
+  --admonition-bg: rgba(2, 122, 255, 0.1);
+  --admonition-title-color: #2962ff;
 }
 
 /* Tip admonition - Green theme */
 .admonition-tip {
-  border-left-color: #00c853;
-  background-color: rgba(0, 200, 83, 0.1);
-}
-
-.admonition-tip .admonition-title {
-  color: #00a344;
+  --admonition-color: #00c853;
+  --admonition-bg: rgba(0, 200, 83, 0.1);
+  --admonition-title-color: #00a344;
 }
 
 /* Info admonition - Cyan theme */
 .admonition-info {
-  border-left-color: #00b8d4;
-  background-color: rgba(0, 184, 212, 0.1);
-}
-
-.admonition-info .admonition-title {
-  color: #0097a7;
+  --admonition-color: #00b8d4;
+  --admonition-bg: rgba(0, 184, 212, 0.1);
+  --admonition-title-color: #0097a7;
 }
 
 /* Warning admonition - Orange theme */
 .admonition-warning {
-  border-left-color: #ff9100;
-  background-color: rgba(255, 145, 0, 0.1);
-}
-
-.admonition-warning .admonition-title {
-  color: #e65100;
+  --admonition-color: #ff9100;
+  --admonition-bg: rgba(255, 145, 0, 0.1);
+  --admonition-title-color: #e65100;
 }
 
 /* Danger admonition - Red theme */
 .admonition-danger {
-  border-left-color: #ff1744;
-  background-color: rgba(255, 23, 68, 0.1);
-}
-
-.admonition-danger .admonition-title {
-  color: #c41c00;
+  --admonition-color: #ff1744;
+  --admonition-bg: rgba(255, 23, 68, 0.1);
+  --admonition-title-color: #c41c00;
 }
 
 /* Success admonition - Green theme */
 .admonition-success {
-  border-left-color: #4caf50;
-  background-color: rgba(76, 175, 80, 0.1);
-}
-
-.admonition-success .admonition-title {
-  color: #2e7d32;
+  --admonition-color: #4caf50;
+  --admonition-bg: rgba(76, 175, 80, 0.1);
+  --admonition-title-color: #2e7d32;
 }
 
 /* Question admonition - Purple theme */
 .admonition-question {
-  border-left-color: #7c4dff;
-  background-color: rgba(124, 77, 255, 0.1);
-}
-
-.admonition-question .admonition-title {
-  color: #6200ea;
+  --admonition-color: #7c4dff;
+  --admonition-bg: rgba(124, 77, 255, 0.1);
+  --admonition-title-color: #6200ea;
 }
 
 /* Dark mode support */
@@ -164,65 +145,44 @@ svg.admonition-icon-lucide {
 
   /* Note - dark mode */
   .admonition-note {
-    background-color: rgba(68, 138, 255, 0.15);
-  }
-
-  .admonition-note .admonition-title {
-    color: #82b1ff;
+    --admonition-bg: rgba(68, 138, 255, 0.15);
+    --admonition-title-color: #82b1ff;
   }
 
   /* Tip - dark mode */
   .admonition-tip {
-    background-color: rgba(0, 200, 83, 0.15);
-  }
-
-  .admonition-tip .admonition-title {
-    color: #69f0ae;
+    --admonition-bg: rgba(0, 200, 83, 0.15);
+    --admonition-title-color: #69f0ae;
   }
 
   /* Info - dark mode */
   .admonition-info {
-    background-color: rgba(0, 184, 212, 0.15);
-  }
-
-  .admonition-info .admonition-title {
-    color: #18ffff;
+    --admonition-bg: rgba(0, 184, 212, 0.15);
+    --admonition-title-color: #18ffff;
   }
 
   /* Warning - dark mode */
   .admonition-warning {
-    background-color: rgba(255, 145, 0, 0.15);
-  }
-
-  .admonition-warning .admonition-title {
-    color: #ffab40;
+    --admonition-bg: rgba(255, 145, 0, 0.15);
+    --admonition-title-color: #ffab40;
   }
 
   /* Danger - dark mode */
   .admonition-danger {
-    background-color: rgba(255, 23, 68, 0.15);
-  }
-
-  .admonition-danger .admonition-title {
-    color: #ff5252;
+    --admonition-bg: rgba(255, 23, 68, 0.15);
+    --admonition-title-color: #ff5252;
   }
 
   /* Success - dark mode */
   .admonition-success {
-    background-color: rgba(76, 175, 80, 0.15);
-  }
-
-  .admonition-success .admonition-title {
-    color: #81c784;
+    --admonition-bg: rgba(76, 175, 80, 0.15);
+    --admonition-title-color: #81c784;
   }
 
   /* Question - dark mode */
   .admonition-question {
-    background-color: rgba(124, 77, 255, 0.15);
-  }
-
-  .admonition-question .admonition-title {
-    color: #b388ff;
+    --admonition-bg: rgba(124, 77, 255, 0.15);
+    --admonition-title-color: #b388ff;
   }
 }
 
