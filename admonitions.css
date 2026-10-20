@@ -139,10 +139,6 @@ svg.admonition-icon-lucide {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 
-  .admonition-content {
-    color: #d0d0d0;
-  }
-
   /* Note - dark mode */
   .admonition-note {
     --admonition-bg: rgba(68, 138, 255, 0.15);
