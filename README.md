@@ -42,6 +42,14 @@ Content goes here
 :::
 ```
 
+The Docusaurus v3 form, with the title in brackets, also works:
+
+```markdown
+:::note[Optional Title]
+Content goes here
+:::
+```
+
 ### Obsidian Style (default)
 
 ```markdown
