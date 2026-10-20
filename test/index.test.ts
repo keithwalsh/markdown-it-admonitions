@@ -33,6 +33,15 @@ describe("docusaurus syntax", () => {
     );
   });
 
+  it("matches the type case-insensitively", () => {
+    expect(render("::: NOTE\nBody\n:::")).toBe(
+      admonition("note", "Note", "<p>Body</p>\n", emoji("📝")),
+    );
+    expect(render(":::Tip[Hint]\nBody\n:::")).toBe(
+      admonition("tip", "Hint", "<p>Body</p>\n", emoji("💡")),
+    );
+  });
+
   it("accepts the Docusaurus v3 [Title] syntax", () => {
     expect(render(":::note[My **Title**]\nBody\n:::")).toBe(
       admonition("note", "My <strong>Title</strong>", "<p>Body</p>\n", emoji("📝")),

@@ -25,11 +25,11 @@ const MIN_MARKER_NUM = 3;
 const BRACKET_TITLE_PATTERN = /^\s*([^\s[]+)\[(.*)\]\s*$/;
 
 /**
- * Read the admonition type from the text after the opening marker
+ * Read the admonition type from the text after the opening marker, lowercased
  * Accepts "type Title" and "type[Title]"
  */
 const getContainerType = (params: string): string | undefined =>
-  /^[^\s[]+/.exec(params.trim())?.[0];
+  /^[^\s[]+/.exec(params.trim())?.[0].toLowerCase();
 
 const defaultTypes: readonly string[] = [
   "note",
@@ -469,7 +469,7 @@ const createAdmonitionContainer = (
   const {
     name,
     marker = ":",
-    validate = (params: string): boolean => getContainerType(params) === name,
+    validate = (params: string): boolean => getContainerType(params) === name.toLowerCase(),
   } = options;
 
   const markerStart = marker[0]!; // Safe: marker is validated to be non-empty
@@ -879,7 +879,7 @@ export const admonitionPlugin = (
       const containerOptions: MarkdownItAdmonitionOptions = {
         name: type,
         marker,
-        validate: (params: string): boolean => getContainerType(params) === type,
+        validate: (params: string): boolean => getContainerType(params) === type.toLowerCase(),
       };
 
       const container = createAdmonitionContainer(containerOptions);
