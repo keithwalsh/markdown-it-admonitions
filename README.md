@@ -74,6 +74,10 @@ Add `-` or `+` straight after the type to make the callout foldable. It renders 
 > Hidden until opened
 ```
 
+Obsidian's aliases `hint`, `faq`, `error` and `check` render as `tip`, `question`, `danger` and `success`, titled with the alias unless you give a title. A type you register under the same name takes precedence.
+
+Type names are case-insensitive in both styles, so `::: NOTE` and `> [!NOTE]` both work.
+
 Both styles can be enabled or disabled independently via options.
 
 Titles can contain inline Markdown, such as `**bold**`, `` `code` `` or links.
