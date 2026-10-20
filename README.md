@@ -50,6 +50,13 @@ Content goes here
 > More content
 ```
 
+Add `-` or `+` straight after the type to make the callout foldable. It renders as a `<details>` element, collapsed with `-` and expanded with `+`:
+
+```markdown
+> [!tip]- Click to expand
+> Hidden until opened
+```
+
 Both styles can be enabled or disabled independently via options.
 
 Titles can contain inline Markdown, such as `**bold**`, `` `code` `` or links.
