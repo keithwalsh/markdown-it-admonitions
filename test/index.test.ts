@@ -33,6 +33,15 @@ describe("docusaurus syntax", () => {
     );
   });
 
+  it("accepts the Docusaurus v3 [Title] syntax", () => {
+    expect(render(":::note[My **Title**]\nBody\n:::")).toBe(
+      admonition("note", "My <strong>Title</strong>", "<p>Body</p>\n", emoji("📝")),
+    );
+    expect(render("::: tip[]\nBody\n:::")).toBe(
+      admonition("tip", "Tip", "<p>Body</p>\n", emoji("💡")),
+    );
+  });
+
   it("renders every default type", () => {
     const types = ["note", "tip", "warning", "danger", "info", "success", "question", "important", "caution"];
     for (const type of types) {

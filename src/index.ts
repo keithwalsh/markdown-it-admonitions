@@ -19,6 +19,18 @@ import type {
 
 const MIN_MARKER_NUM = 3;
 
+/**
+ * Matches the Docusaurus v3 title syntax after the marker: type[Title]
+ */
+const BRACKET_TITLE_PATTERN = /^\s*([^\s[]+)\[(.*)\]\s*$/;
+
+/**
+ * Read the admonition type from the text after the opening marker
+ * Accepts "type Title" and "type[Title]"
+ */
+const getContainerType = (params: string): string | undefined =>
+  /^[^\s[]+/.exec(params.trim())?.[0];
+
 const defaultTypes: readonly string[] = [
   "note",
   "tip",
@@ -457,8 +469,7 @@ const createAdmonitionContainer = (
   const {
     name,
     marker = ":",
-    validate = (params: string): boolean =>
-      params.trim().split(" ", 2)[0] === name,
+    validate = (params: string): boolean => getContainerType(params) === name,
   } = options;
 
   const markerStart = marker[0]!; // Safe: marker is validated to be non-empty
@@ -519,7 +530,9 @@ const createAdmonitionContainer = (
     const openToken = state.push(`admonition_${name}_open`, "div", 1);
     openToken.markup = markup;
     openToken.block = true;
-    openToken.info = params;
+    // Normalise type[Title] to "type Title" so renderers read one format
+    const bracketTitle = BRACKET_TITLE_PATTERN.exec(params);
+    openToken.info = bracketTitle ? `${bracketTitle[1]} ${bracketTitle[2]}` : params;
     openToken.map = [startLine, closingFence.nextLine];
 
     // Tokenize content BETWEEN open and close tokens
@@ -863,10 +876,7 @@ export const admonitionPlugin = (
       const containerOptions: MarkdownItAdmonitionOptions = {
         name: type,
         marker,
-        validate: (params: string): boolean => {
-          const typeName = params.trim().split(" ", 2)[0];
-          return typeName === type;
-        },
+        validate: (params: string): boolean => getContainerType(params) === type,
       };
 
       const container = createAdmonitionContainer(containerOptions);
