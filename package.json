@@ -38,6 +38,9 @@
     "admonitions.css",
     "admonitions.min.css"
   ],
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build && npm run build:css",
