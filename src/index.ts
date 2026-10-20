@@ -419,7 +419,7 @@ const createAdmonitionContainer = (
 };
 
 /**
- * Symmetric render pair interface to ensure open/close renders match
+ * Open and close renderers for one admonition type
  */
 interface RenderPair {
   open: RenderFunction;
@@ -439,19 +439,15 @@ interface IconRenderConfig {
 }
 
 /**
- * Create symmetric render pair for an admonition type
- * Ensures that open and close renders are properly matched
+ * Create the default open and close renderers for an admonition type
  * @param md - The markdown-it instance, used to render inline markdown in titles
  * @param name - The admonition type name
  * @param iconConfig - Icon configuration including content and type
- * @param renderTitle - Whether to render the title section (must be symmetric)
- * @returns A matched pair of open and close render functions
  */
 const createDefaultRenderPair = (
   md: MarkdownIt,
   name: string,
-  iconConfig: IconRenderConfig = { isLucide: false },
-  renderTitle: boolean = true,
+  iconConfig: IconRenderConfig,
 ): RenderPair => {
   // Open render function
   const open: RenderFunction = (
@@ -485,44 +481,34 @@ const createDefaultRenderPair = (
 
     let result = slf.renderToken(tokens, index, _options);
 
-    if (renderTitle) {
-      result += `<${titleTag} class="admonition-title">`;
-      if (iconConfig.icon) {
-        if (iconConfig.isLucide) {
-          // Render Lucide icon placeholder with data attributes
-          // data-lucide-icon holds the react-icons/lu name, data-lucide the Lucide name
-          const lucideAttr = iconConfig.lucideName ? ` data-lucide="${escapeHtml(iconConfig.lucideName)}"` : "";
-          result += `<span class="admonition-icon admonition-icon-lucide" aria-hidden="true" data-lucide-icon="${escapeHtml(iconConfig.icon)}"${lucideAttr}></span>`;
-        } else {
-          // Render emoji icon directly
-          result += `<span class="admonition-icon" aria-hidden="true">${iconConfig.icon}</span>`;
-        }
+    result += `<${titleTag} class="admonition-title">`;
+    if (iconConfig.icon) {
+      if (iconConfig.isLucide) {
+        // Render Lucide icon placeholder with data attributes
+        // data-lucide-icon holds the react-icons/lu name, data-lucide the Lucide name
+        const lucideAttr = iconConfig.lucideName ? ` data-lucide="${escapeHtml(iconConfig.lucideName)}"` : "";
+        result += `<span class="admonition-icon admonition-icon-lucide" aria-hidden="true" data-lucide-icon="${escapeHtml(iconConfig.icon)}"${lucideAttr}></span>`;
+      } else {
+        // Render emoji icon directly
+        result += `<span class="admonition-icon" aria-hidden="true">${iconConfig.icon}</span>`;
       }
-      result += `<span class="admonition-title-text">${md.renderInline(title, env)}</span>`;
-      result += `</${titleTag}>\n`;
-      result += '<div class="admonition-content">\n';
     }
+    result += `<span class="admonition-title-text">${md.renderInline(title, env)}</span>`;
+    result += `</${titleTag}>\n`;
+    result += '<div class="admonition-content">\n';
 
     return result;
   };
 
-  // Close render function (symmetric with open)
+  // Close render function: ends admonition-content, then the container
   const close: RenderFunction = (
     tokens: Token[],
     index: number,
     options: Options,
     _env: RenderEnvironment,
     slf: Renderer,
-  ): string => {
-    let result = "";
-    if (renderTitle) {
-      result += "</div>\n"; // close admonition-content (matches open)
-    }
-    result += slf.renderToken(tokens, index, options);
-    return result;
-  };
+  ): string => "</div>\n" + slf.renderToken(tokens, index, options);
 
-  // Return symmetric pair
   return { open, close };
 };
 
@@ -539,13 +525,12 @@ interface IconRenderOptions {
 }
 
 /**
- * Helper function to register symmetric render rules for an admonition type
- * Ensures that open and close render functions are always properly paired
+ * Register the open and close render rules for an admonition type
  * Replaces rules from an earlier md.use() call so its options take effect
  * @param md - The markdown-it instance
  * @param type - The admonition type name
  * @param iconOptions - Icon rendering options
- * @param customRenders - Custom render functions (must provide both open and close together)
+ * @param customRenders - Custom open and close renderers per type
  */
 const registerRenderRules = (
   md: MarkdownIt,
@@ -553,12 +538,10 @@ const registerRenderRules = (
   iconOptions: IconRenderOptions,
   customRenders: Readonly<Record<string, CustomRenderPair>>,
 ): void => {
-  // Get custom render pair (validated to have both open and close, or neither)
+  // Custom renders are validated to come as an open and close pair
   const customRenderPair = customRenders[type];
 
-  // Use symmetric render pair: either custom (both open and close) or default (both open and close)
   if (customRenderPair?.open && customRenderPair?.close) {
-    // Custom renders are validated to be provided as a symmetric pair
     md.renderer.rules[`admonition_${type}_open`] = customRenderPair.open;
     md.renderer.rules[`admonition_${type}_close`] = customRenderPair.close;
   } else {
@@ -572,8 +555,7 @@ const registerRenderRules = (
         }
       : { icon: iconOptions.emojiIcons[type], isLucide: false };
     
-    // Create default symmetric render pair
-    const defaultPair = createDefaultRenderPair(md, type, iconConfig, true);
+    const defaultPair = createDefaultRenderPair(md, type, iconConfig);
     md.renderer.rules[`admonition_${type}_open`] = defaultPair.open;
     md.renderer.rules[`admonition_${type}_close`] = defaultPair.close;
   }
