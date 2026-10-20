@@ -548,12 +548,14 @@ interface IconRenderConfig {
 /**
  * Create symmetric render pair for an admonition type
  * Ensures that open and close renders are properly matched
+ * @param md - The markdown-it instance, used to render inline markdown in titles
  * @param name - The admonition type name
  * @param iconConfig - Icon configuration including content and type
  * @param renderTitle - Whether to render the title section (must be symmetric)
  * @returns A matched pair of open and close render functions
  */
 const createDefaultRenderPair = (
+  md: MarkdownIt,
   name: string,
   iconConfig: IconRenderConfig = { isLucide: false },
   renderTitle: boolean = true,
@@ -563,7 +565,7 @@ const createDefaultRenderPair = (
     tokens: Token[],
     index: number,
     _options: Options,
-    _env: RenderEnvironment,
+    env: RenderEnvironment,
     slf: Renderer,
   ): string => {
     const token = tokens[index];
@@ -593,7 +595,7 @@ const createDefaultRenderPair = (
           result += `<span class="admonition-icon" aria-hidden="true">${iconConfig.icon}</span>`;
         }
       }
-      result += escapeHtml(title);
+      result += `<span class="admonition-title-text">${md.renderInline(title, env)}</span>`;
       result += "</div>\n";
       result += '<div class="admonition-content">\n';
     }
@@ -672,7 +674,7 @@ const registerRenderRules = (
       : { icon: iconOptions.emojiIcons[type], isLucide: false };
     
     // Create default symmetric render pair
-    const defaultPair = createDefaultRenderPair(type, iconConfig, true);
+    const defaultPair = createDefaultRenderPair(md, type, iconConfig, true);
     md.renderer.rules[`admonition_${type}_open`] = defaultPair.open;
     md.renderer.rules[`admonition_${type}_close`] = defaultPair.close;
   }

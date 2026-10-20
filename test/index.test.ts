@@ -8,7 +8,7 @@ const render = (src: string, options?: AdmonitionPluginOptions): string =>
 
 const admonition = (type: string, title: string, content: string, icon = ""): string =>
   `<div class="admonition admonition-${type}">\n` +
-  `<div class="admonition-title">${icon}${title}</div>\n` +
+  `<div class="admonition-title">${icon}<span class="admonition-title-text">${title}</span></div>\n` +
   `<div class="admonition-content">\n${content}</div>\n` +
   `</div>\n`;
 
@@ -43,9 +43,15 @@ describe("docusaurus syntax", () => {
     expect(render("::: unknown\nBody\n:::")).toBe("<p>::: unknown\nBody\n:::</p>\n");
   });
 
+  it("renders inline markdown in the title", () => {
+    expect(render("::: note **Bold** `code` [link](https://example.com)\nBody\n:::")).toContain(
+      '<strong>Bold</strong> <code>code</code> <a href="https://example.com">link</a></span></div>',
+    );
+  });
+
   it("escapes HTML in the title", () => {
     expect(render("::: note <b>Bold</b>\nBody\n:::")).toContain(
-      "&lt;b&gt;Bold&lt;/b&gt;</div>",
+      "&lt;b&gt;Bold&lt;/b&gt;</span></div>",
     );
   });
 
@@ -109,6 +115,12 @@ describe("obsidian syntax", () => {
   it("uses the text after the type as the title", () => {
     expect(render("> [!warning] Mind the gap\n> Body")).toBe(
       admonition("warning", "Mind the gap", "<p>Body</p>\n", emoji("⚠️")),
+    );
+  });
+
+  it("renders inline markdown in the title", () => {
+    expect(render("> [!note] *Mind* the `gap`\n> Body")).toContain(
+      "<em>Mind</em> the <code>gap</code></span></div>",
     );
   });
 

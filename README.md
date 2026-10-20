@@ -156,7 +156,7 @@ Whichever convention you use, every placeholder carries the icon name in both fo
 <div class="admonition admonition-note">
   <div class="admonition-title">
     <span class="admonition-icon admonition-icon-lucide" aria-hidden="true" data-lucide-icon="LuStickyNote" data-lucide="sticky-note"></span>
-    Note
+    <span class="admonition-title-text">Note</span>
   </div>
   <div class="admonition-content">
     Content here
